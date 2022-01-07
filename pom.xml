@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>jfcloud</artifactId>
+        <groupId>com.github.jfcloud</groupId>
+        <version>jfcloud.v42.1</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>jfcloud-jos</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>jfcloud-jos-api</module>
+        <module>jfcloud-jos-biz</module>
+        <module>jfcloud-jos-core</module>
+    </modules>
+
+    <properties>
+    </properties>
+
+</project>

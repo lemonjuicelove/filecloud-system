@@ -1,0 +1,35 @@
+#存储类型
+jfconf.storage-type=0
+#文件存储路径
+jfconf.local-storage-path=D:\\server\\files
+#图片缩略图
+jfconf.thumb-image.width=150
+jfconf.thumb-image.height=150
+
+#阿里云oss基本配置
+jfconf.aliyun.oss.endpoint=
+jfconf.aliyun.oss.access-key-id=
+jfconf.aliyun.oss.access-key-secret=
+jfconf.aliyun.oss.bucket-name=
+
+#FastDFS配置
+#读取时间
+fdfs.so-timeout=15000 
+#超时连接时间
+fdfs.connect-timeout=15000
+# 连接池最大数量
+fdfs.pool.max-total=200
+#单个tracker最大连接数
+fdfs.pool.max-total-per-key=50
+#连接耗尽最大等待时间 毫秒
+fdfs.pool.max-wait-millis=5000
+fdfs.tracker-list=127.0.0.1:22122
+
+
+#hosts
+192.168.73.103  jfcloud-v4-redis
+192.168.73.225 jfcloud-v4-mysql
+1.117.31.163  jfcloud-v4-oss
+192.168.73.103 jfcloud-v4-nacos
+192.168.73.103  jfcloud-v4-sentinel
+192.168.73.103 jfcloud-v4-gateway

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>jfcloud-jos</artifactId>
+        <groupId>com.github.jfcloud</groupId>
+        <version>jfcloud.v42.1</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>jfcloud-jos-biz</artifactId>
+    <description>jfcloud 存储业务处理模块</description>
+
+    <dependencies>
+        <!--upms api、model 模块-->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-jos-core</artifactId>
+            <version>jfcloud.v42.1</version>
+        </dependency>
+
+        <!--web 模块-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--undertow容器-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-undertow</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-test</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ma.glasnost.orika</groupId>
+            <artifactId>orika-core</artifactId>
+            <version>1.5.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!--日志处理-->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-log</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-data</artifactId>
+        </dependency>
+        <!--swagger-->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-swagger</artifactId>
+        </dependency>
+        <!--注册中心客户端-->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <!--配置中心客户端-->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+        <!--spring security 、oauth、jwt依赖-->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-security</artifactId>
+        </dependency>
+        <!--XSS 安全过滤-->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-xss</artifactId>
+        </dependency>
+        <!--支持动态路由配置 -->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-gateway</artifactId>
+        </dependency>
+        <!--sentinel 依赖-->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-sentinel</artifactId>
+        </dependency>
+        <!--路由控制-->
+        <dependency>
+            <groupId>com.github.jfcloud</groupId>
+            <artifactId>jfcloud-common-gray</artifactId>
+        </dependency>
+        <!--mybatis-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+        </dependency>
+        <!-- druid 连接池 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-starter</artifactId>
+        </dependency>
+        <!--数据库-->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <!--包含文件夹以及子文件夹下所有资源-->
+                    <include>**/*.*</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+
+</project>

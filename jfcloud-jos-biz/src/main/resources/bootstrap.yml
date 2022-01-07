@@ -1,0 +1,7 @@
+server:
+  port: 59006
+spring:
+  application:
+    name: jfcloud-jos-biz
+  profiles:
+    active: dev
