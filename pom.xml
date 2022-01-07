@@ -11,6 +11,7 @@
 
     <artifactId>jfcloud-jos</artifactId>
     <packaging>pom</packaging>
+
     <modules>
         <module>jfcloud-jos-api</module>
         <module>jfcloud-jos-biz</module>
