@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.jfcloud.jos.mapper.FileinfoMapper">
+
+    <update id="removeFile">
+         update jos_fileinfo set deleted_flag = '0',deleted_by = #{deletedBy},deleted_date = #{date}
+         where deleted_flag = '1' and id in
+         <foreach collection="list" item="id" open="(" close=")" separator=",">
+             #{id}
+         </foreach>
+    </update>
+
+    <select id="getChildList" resultType="com.github.jfcloud.jos.entity.Fileinfo">
+        select id,name,permissions,parent_id,is_file,file_size,file_auther,jos_metadata_id,created_by,created_date,
+        last_modified_by,last_modified_date,deleted_by,deleted_date,deleted_flag,db_id,path
+        from jos_fileinfo where FIND_IN_SET(id,getChildrenOrg(#{id})) and deleted_flag = '1'
+    </select>
+
+    <select id="getDeletedChildList" resultType="com.github.jfcloud.jos.entity.Fileinfo">
+        select id,name,permissions,parent_id,is_file,file_size,file_auther,jos_metadata_id,created_by,created_date,
+        last_modified_by,last_modified_date,deleted_by,deleted_date,deleted_flag,db_id,path
+        from jos_fileinfo where FIND_IN_SET(id,getChildrenOrg(#{id})) and deleted_flag = '0'
+    </select>
+
+    <select id="listDeletedByIds" resultType="com.github.jfcloud.jos.entity.Fileinfo">
+        select id,name,permissions,parent_id,is_file,file_size,file_auther,jos_metadata_id,created_by,created_date,
+        last_modified_by,last_modified_date,deleted_by,deleted_date,deleted_flag,db_id,path
+        from jos_fileinfo where deleted_flag = '0' and id in
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <update id="recoveryFile">
+        update jos_fileinfo set deleted_flag = '1',deleted_by = null,deleted_date = null
+        where deleted_flag = '0' and id in
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

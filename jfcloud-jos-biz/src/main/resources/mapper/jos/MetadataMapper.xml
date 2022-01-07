@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.jfcloud.jos.mapper.MetadataMapper">
+
+    <update id="updateStatues">
+        update jos_metadata set status = '0', last_modified_by = #{modifiedBy}, last_modified_date = #{modifiedDate}
+        where status = '1' and deleted_flag = '1' and id in
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>
