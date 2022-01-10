@@ -34,8 +34,8 @@ public class FileSafeCode {
             return new BigInteger(1, digest).toString(16);
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
     }
 
     public static String getMD5(File file){

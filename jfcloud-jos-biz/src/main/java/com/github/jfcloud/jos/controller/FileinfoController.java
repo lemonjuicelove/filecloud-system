@@ -3,11 +3,14 @@ package com.github.jfcloud.jos.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.github.jfcloud.jos.entity.Fileinfo;
+import com.github.jfcloud.jos.entity.Metadata;
+import com.github.jfcloud.jos.entity.MultipartFileParam;
 import com.github.jfcloud.jos.entity.RecoveryFile;
+import com.github.jfcloud.jos.exception.BizException;
 import com.github.jfcloud.jos.service.FileinfoService;
+import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.service.RecoveryFileService;
-import com.github.jfcloud.jos.util.CommonResult;
-import com.github.jfcloud.jos.util.DownloadConstant;
+import com.github.jfcloud.jos.util.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,11 +46,15 @@ public class FileinfoController {
     @Autowired
     private RecoveryFileService recoveryFileService;
 
-    /*@Autowired
-    private FileinfoMapper fileinfoMapper;*/
+    @Autowired
+    private MetadataService metadataService;
+
+    @Autowired
+    private RedisUtil redisUtil;
+
 
     // test ok
-    @ApiOperation("上传文件：断点上传")
+    /*@ApiOperation("上传文件：断点上传")
     @PostMapping("/addFile/{parentId}")
     public CommonResult addFile(MultipartFile file,
                                 @PathVariable("parentId") Long parentId,
@@ -57,7 +63,116 @@ public class FileinfoController {
         boolean flag = fileinfoService.addFile(file, parentId,request,response);
 
         return flag ? CommonResult.ok() : CommonResult.error();
+    }*/
+
+    @ApiOperation("上传文件：分片上传")
+    @PostMapping("/uploadFile/{parentId}")
+    public CommonResult uploadFile(MultipartFileParam fileParam,
+                                   @PathVariable("parentId") Long parentId){
+
+        if (fileParam == null){
+            return CommonResult.error().message("文件错误，请重新上传");
+        }
+
+        // 去元数据表中查询整个文件的md5码，如果存在，秒传
+        String wholeIdentifier = fileParam.getWholeIdentifier();
+        Metadata wholeMetadata = metadataService.findMetadataByMd5(wholeIdentifier);
+        if (wholeMetadata != null){
+            return CommonResult.ok().message("文件已经存在");
+        }
+
+        // 去后缀名
+        String prename = fileParam.getFileName().substring(0,fileParam.getFileName().indexOf("."));
+
+        // 文件不存在，去Redis缓存中获取
+        // key：整个文件名+md5    value：当前切片+md5
+        String key = prename + "-" + fileParam.getWholeIdentifier();
+        String value = fileParam.getChunkNumber()+ "-" +fileParam.getIdentifier();
+        if (redisUtil.hasKey(key)){
+            List<Object> list = redisUtil.getList(key);
+            for (Object o : list) {
+                if (o.equals(value)){
+                    CommonResult commonResult = CommonResult.ok().message("上传成功").data("下一块分片", fileParam.getChunkNumber() + 1);
+                    if (fileParam.getChunkNumber() >= fileParam.getChunkSize()){
+                        commonResult.data("是否合并切片","yes");
+                    }else{
+                        commonResult.data("是否合并切片","no");
+                    }
+                    return commonResult;
+                }
+            }
+        }
+
+        // 当前切片没有上传，那么将当前切片上传
+        try {
+            boolean upload = UploadUtil.uploadFile(fileParam.getFile(), key, value);
+            if (!upload) return CommonResult.error().message("上传失败");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommonResult.error().message("上传失败");
+        }
+
+        // 然后将当前切片的唯一标识放入到Redis中
+        if (redisUtil.setList(key,value,60*60*24)){
+            CommonResult commonResult = CommonResult.ok().message("当前分片上传成功").data("下一块分片", fileParam.getChunkNumber() + 1);
+            if (fileParam.getChunkNumber() >= fileParam.getChunkSize()){
+                commonResult.data("是否合并分片","yes");
+            }else{
+                commonResult.data("是否合并分片","no");
+            }
+            return commonResult;
+        }else{
+            redisUtil.removeValue(key,value);
+            return CommonResult.error().message("文件错误，请重新上传");
+        }
+
     }
+
+    @ApiOperation("上传文件：合并切片")
+    @PostMapping("/mergeFile/{filename}/{metadata}/{parentId}")
+    @Transactional(rollbackFor = Exception.class)
+    public CommonResult mergeFile(@PathVariable("filename")String filename,
+                                  @PathVariable("metadata")String metadata,
+                                  @PathVariable("parentId")Long parentId){
+
+        // 将切片文件合并成一个文件
+        if (filename == null) return CommonResult.error();
+        File file = UploadUtil.mergeFile(filename, metadata);
+        if (file == null) return CommonResult.error();
+
+        // 删除临时文件
+        UploadUtil.deleteTempFile(filename,metadata);
+
+        // fileinfo表中添加记录
+        Fileinfo fileinfo = new Fileinfo();
+        Fileinfo parentFile = fileinfoService.getById(parentId);
+        if (parentFile == null) throw new BizException("上传文件失败");
+        if (parentFile.getId() != 1) fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
+        fileinfo.setParentId(parentId);
+        fileinfo.setName(fileinfoService.getRepeatFileName(parentId,filename));
+        fileinfo.setIsFile("0");
+        fileinfo.setFileSize((double) file.length());
+
+        // 元数据表中添加记录
+        Metadata metadata1 = new Metadata();
+        metadata1.setMd5(metadata);
+        metadata1.setSha1(FileSafeCode.getSha1(file));
+        metadata1.setCrc32(FileSafeCode.getCRC32(file));
+        metadata1.setLocalCtime(new Date());
+        metadata1.setPath(fileinfo.getPath());
+        metadata1.setFileSize(fileinfo.getFileSize());
+        metadata1.setStatus("1");
+        metadata1.setMimeType(UploadUtil.getMine(filename));
+        metadata1.setMimeName(UploadUtil.getPro(filename));
+        metadata1.setFileStoreKey(file.getAbsolutePath());
+
+        metadataService.save(metadata1);
+        fileinfo.setJosMetadataId(metadata1.getId());
+        fileinfoService.save(fileinfo);
+
+        return CommonResult.ok();
+    }
+
 
     // test ok
     @ApiOperation("根据id查询文件信息")
@@ -147,8 +262,8 @@ public class FileinfoController {
                              HttpServletResponse response){
 
         // 获取文件的下载路径名
-        String filePath = fileinfoService.downloadFile(id);
-        if (filePath == null) return;
+        Metadata metadata = fileinfoService.downloadFile(id);
+        if (metadata == null) return;
 
         // 下载文件
         OutputStream os = null;
@@ -185,45 +300,15 @@ public class FileinfoController {
                 }
             }
         }
-
     }
 
-    /*@ApiOperation("判断当前目录下是否已经存在同名的文件")
-    @GetMapping("/existsFile/{parentId}/{fileName}")
-    public void existsFile(@PathVariable("parentId") Long parentId, @PathVariable("fileName") String fileName){
-        boolean b = fileinfoService.existsFile(parentId, fileName);
-        System.out.println(b);
-    }*/
-
-    /*@ApiOperation("递归查询")
-    @GetMapping("/dfsFileList/{id}")
-    public void dfsFileList(@PathVariable("id") Long id){
-        List<Fileinfo> childList = fileinfoMapper.getChildList(id);
-        for (Fileinfo fileinfo : childList) {
-            System.out.println(fileinfo);
-        }
-    }*/
-
-    /*@ApiOperation("上传文件")
-    @PostMapping("/addfile")
-    public void addfile(MultipartFile file){
-        String md5 = FileSafeCode.getMD5(file);
-        System.out.println(md5);
-    }*/
-
-    /*@ApiOperation("查看缓存数据")
-    @GetMapping("/cache/{key}")
-    public void cache(String key){
-        Map<Object, Object> cacheMap = InitialCache.getCacheMap();
-        for (Map.Entry<Object, Object> entry : cacheMap.entrySet()) {
-            System.out.println("key:" + entry.getKey() + "---value:" + entry.getValue());
-        }
-    }*/
-
-    /*@ApiOperation("获取重复文件")
-    @GetMapping("/repeatFile/{parentId}/{filename}")
-    public String repeatFile(@PathVariable("parentId") Long parentId,@PathVariable("filename") String filename){
-        return fileinfoService.getRepeatFileName(parentId,filename);
+    /*@ApiOperation("测试分片上传")
+    @PostMapping("/testSlice")
+    public void testSlice(MultipartFile file){
+        File file1 = new File("C:\\Users\\73561\\Desktop\\bioradar\\real\\" + "d41d8cd98f00b204e9800998ecf8427e");
+        System.out.println(FileSafeCode.getMD5(file1)); // d41d8cd98f00b204e9800998ecf8427e
+        System.out.println(FileSafeCode.getSha1(file1)); // da39a3ee5e6b4b0d3255bfef95601890afd80709
+        System.out.println(FileSafeCode.getCRC32(file1)); // 0
     }*/
 
 }

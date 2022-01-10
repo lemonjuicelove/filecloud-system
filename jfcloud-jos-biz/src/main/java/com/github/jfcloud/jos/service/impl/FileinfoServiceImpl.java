@@ -9,19 +9,12 @@ import com.github.jfcloud.jos.service.FileinfoService;
 import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.service.RecoveryFileService;
 import com.github.jfcloud.jos.util.FileSafeCode;
-import com.github.jfcloud.jos.util.InitialCache;
-import com.github.jfcloud.jos.util.MultipartFileToFile;
+import com.github.jfcloud.jos.util.UploadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -128,7 +121,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     }
 
     // 上传文件
-    @Override
+    /*@Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addFile(MultipartFile file, Long parentId, HttpServletRequest request, HttpServletResponse response) {
 
@@ -215,7 +208,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         fileinfo.setJosMetadataId(metadata.getId());
 
         return this.save(fileinfo);
-    }
+    }*/
 
     // 新建一个空文件
     @Override
@@ -226,29 +219,9 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
             return false;
         }
 
-        Map<Object, Object> cacheMap = InitialCache.getCacheMap();
-        String real = (String) cacheMap.get("local_real");
-
         // 先查询是否存在同名的文件
         String fileName = getRepeatFileName(parentId, fileinfo.getName());
         fileinfo.setName(fileName);
-
-        // 创建一个本地文件
-        FileOutputStream fos = null;
-        try{
-            // 动态拼接
-            fos = new FileOutputStream(real+fileinfo.getName());
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } finally {
-            if (fos != null){
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
 
         // 文件表添加记录
         Fileinfo parentFile = this.getById(parentId);
@@ -258,25 +231,19 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         fileinfo.setParentId(parentId);
         fileinfo.setIsFile("0");
 
-        // 动态拼接
-        File file = new File(real+fileinfo.getName());
-
         // 元数据表添加记录
         Metadata metadata = new Metadata();
         metadata.setLocalCtime(new Date());
         metadata.setPath(fileinfo.getPath());
-        metadata.setMd5(FileSafeCode.getMD5(file));
-        metadata.setSha1(FileSafeCode.getSha1(file));
-        metadata.setCrc32(FileSafeCode.getCRC32(file));
+        metadata.setMd5(UploadUtil.EMPTYMD5);
+        metadata.setSha1(UploadUtil.EMPTYSHA1);
+        metadata.setCrc32(UploadUtil.EMPTYCRC32);
         metadata.setStatus("1");
-        metadata.setMimeType(MultipartFileToFile.getMine(fileinfo.getName()));
-        String name = fileinfo.getName();
-        name = name.substring(name.lastIndexOf(".")+1);
-        metadata.setMimeName(name);
-        metadata.setFileStoreKey(file.getAbsolutePath());
+        metadata.setMimeType(UploadUtil.getMine(fileinfo.getName()));
+        metadata.setMimeName(UploadUtil.getPro(fileinfo.getName()));
+        metadata.setFileStoreKey(UploadUtil.EMPTYFILEPATH);
 
         metadataService.save(metadata);
-
         fileinfo.setJosMetadataId(metadata.getId());
         this.save(fileinfo);
 
@@ -305,7 +272,6 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         return update;
     }
 
-
     // 递归的修改文件路径
     private void updateFilePath(Fileinfo fileinfo){
 
@@ -331,36 +297,30 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
     // 根据文件id下载文件
     @Override
-    public String downloadFile(Long id) {
+    public Metadata downloadFile(Long id) {
 
         // 获取文件信息
         Fileinfo fileinfo = this.getById(id);
 
-        if ("1".equals(fileinfo.getIsFile())){
+        if (fileinfo == null || "1".equals(fileinfo.getIsFile())){
             return null;
         }
 
         // 获取元数据id，去元数据表找到文件进行下载
         Long metadataId = fileinfo.getJosMetadataId();
         Metadata metadata = metadataService.getById(metadataId);
-        if (metadata == null){
-            return null;
-        }
-        String fileStoreKey = metadata.getFileStoreKey();
-
-        return fileStoreKey;
+        return metadata;
     }
 
-
     // 根据parentId和文件名查询是否已经存在文件或文件夹
-    public boolean existsFile(Long parentId, String fileName){
+    /*public boolean existsFile(Long parentId, String fileName){
         QueryWrapper<Fileinfo> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("parent_id",parentId);
         queryWrapper.eq("name",fileName);
         Fileinfo one = this.getOne(queryWrapper);
         if (one == null) return false;
         else return true;
-    }
+    }*/
 
     /*
         获取重复文件名

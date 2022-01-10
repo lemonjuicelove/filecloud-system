@@ -2,6 +2,7 @@ package com.github.jfcloud.jos.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.github.jfcloud.jos.entity.Fileinfo;
+import com.github.jfcloud.jos.entity.Metadata;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -24,15 +25,15 @@ public interface FileinfoService extends IService<Fileinfo> {
 
     boolean removeFile(Fileinfo fileinfo);
 
-    boolean addFile(MultipartFile file, Long parentId, HttpServletRequest request, HttpServletResponse response);
+    // boolean addFile(MultipartFile file, Long parentId, HttpServletRequest request, HttpServletResponse response);
 
     boolean createContext(Long parentId, Fileinfo fileinfo);
 
     boolean updateFile(Long id, String name);
 
-    String downloadFile(Long id);
+    Metadata downloadFile(Long id);
 
-    boolean existsFile(Long parentId, String fileName);
+    // boolean existsFile(Long parentId, String fileName);
 
     List<Fileinfo> listDeletedByIds(List<Long> ids);
 
