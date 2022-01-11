@@ -85,9 +85,9 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
         // 根据parentId查询父目录，获取父目录的路径
         Fileinfo parentFile = this.getById(parentId);
-        if (parentFile.getId() != 1){
-            fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
-        }
+        if (parentFile == null) return false;
+
+        fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
         fileinfo.setParentId(parentId);
         fileinfo.setIsFile("1");
 
@@ -98,22 +98,23 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
     // 递归的删除文件或目录
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    // @Transactional(rollbackFor = Exception.class)
     public boolean removeFile(Fileinfo fileinfo){
 
         List<Fileinfo> childList = baseMapper.getChildList(fileinfo.getId());
 
         List<Long> fileIds = new ArrayList<>();
-        List<Long> metadataIds = new ArrayList<>();
+        // List<Long> metadataIds = new ArrayList<>();
         for (Fileinfo fileinfo1 : childList) {
             fileIds.add(fileinfo1.getId());
-            if ("0".equals(fileinfo1.getIsFile())){ // 要删除的是文件：元数据表中的记录也需要修改
+            /*if ("0".equals(fileinfo1.getIsFile())){ // 要删除的是文件：元数据表中的记录也需要修改
                 metadataIds.add(fileinfo1.getJosMetadataId());
-            }
+            }*/
         }
 
         // 逻辑删除fileinfo表中的数据
         baseMapper.removeFile(fileIds,19980218L,new Date());
+
         // 修改元数据表中的状态记录
         // metadataService.updateStatues(metadataIds,19980218L,new Date());
 
@@ -215,9 +216,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     @Transactional(rollbackFor = Exception.class)
     public boolean createContext(Long parentId, Fileinfo fileinfo) {
 
-        if (fileinfo == null){
-            return false;
-        }
+        if (fileinfo == null) return false;
 
         // 先查询是否存在同名的文件
         String fileName = getRepeatFileName(parentId, fileinfo.getName());
@@ -225,9 +224,9 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
         // 文件表添加记录
         Fileinfo parentFile = this.getById(parentId);
-        if (parentFile.getId() != 1){
-            fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
-        }
+        if (parentFile == null) return false;
+
+        fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
         fileinfo.setParentId(parentId);
         fileinfo.setIsFile("0");
 
@@ -257,12 +256,13 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
         Fileinfo fileinfo = this.getById(id);
 
+        if (fileinfo == null) return false;
         // 先查询是否存在同名的文件或目录
         Long parentId = fileinfo.getParentId();
-        String fileName = this.getRepeatFileName(parentId, name);
+        String fileName = getRepeatFileName(parentId, name);
         fileinfo.setName(fileName);
 
-        boolean update = this.updateById(fileinfo);
+        boolean update = updateById(fileinfo);
 
         // 要修改所有子目录的文件路径
         if ("1".equals(fileinfo.getIsFile())){
@@ -275,6 +275,8 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     // 递归的修改文件路径
     private void updateFilePath(Fileinfo fileinfo){
 
+        if (fileinfo == null) return;
+
         QueryWrapper<Fileinfo> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("parent_id",fileinfo.getId());
         List<Fileinfo> fileinfos = this.list(queryWrapper);
@@ -285,7 +287,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
                 updateFilePath(fileinfo1);
             }
             // 修改自己
-            this.updateById(fileinfo1);
+            updateById(fileinfo1);
             // 修改元数据表中的path
             Metadata metadata = metadataService.getById(fileinfo1.getJosMetadataId());
             if (metadata != null){
@@ -297,7 +299,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
     // 根据文件id下载文件
     @Override
-    public Metadata downloadFile(Long id) {
+    public Map<String,String> downloadFile(Long id) {
 
         // 获取文件信息
         Fileinfo fileinfo = this.getById(id);
@@ -309,18 +311,12 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         // 获取元数据id，去元数据表找到文件进行下载
         Long metadataId = fileinfo.getJosMetadataId();
         Metadata metadata = metadataService.getById(metadataId);
-        return metadata;
-    }
 
-    // 根据parentId和文件名查询是否已经存在文件或文件夹
-    /*public boolean existsFile(Long parentId, String fileName){
-        QueryWrapper<Fileinfo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("parent_id",parentId);
-        queryWrapper.eq("name",fileName);
-        Fileinfo one = this.getOne(queryWrapper);
-        if (one == null) return false;
-        else return true;
-    }*/
+        Map<String,String> res = new HashMap<>();
+        res.put("name",fileinfo.getName());
+        res.put("path",metadata.getFileStoreKey());
+        return res;
+    }
 
     /*
         获取重复文件名
@@ -378,6 +374,41 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     @Override
     public void recoveryFile(List<Long> ids) {
         baseMapper.recoveryFile(ids);
+    }
+
+    // 根据ids彻底删除文件
+    @Override
+    public void deleteFiles(List<Long> ids) {
+        baseMapper.deleteFiles(ids);
+    }
+
+    // 移动文件
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean moveFile(Long sourceId, Long targetId) {
+
+        Fileinfo source = this.getById(sourceId);
+        Fileinfo target = this.getById(targetId);
+
+        if (source == null || target == null) return false;
+
+        if (target.getPath().startsWith(source.getPath()) && target.getPath().length() > source.getPath().length()) return false;
+
+        // 判断是否有同名的文件
+        source.setName(getRepeatFileName(targetId,source.getName()));
+
+        // 更改parentId
+        source.setParentId(targetId);
+
+        // 更改path
+        source.setPath(target.getPath()+"/"+target.getName());
+
+        this.updateById(source);
+
+        // 递归修改子文件的path
+        updateFilePath(source);
+
+        return true;
     }
 
 }

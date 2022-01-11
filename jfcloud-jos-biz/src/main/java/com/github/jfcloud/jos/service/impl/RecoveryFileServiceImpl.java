@@ -35,6 +35,7 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
 
         QueryWrapper<RecoveryFile> queryWrapper = new QueryWrapper<>();
         queryWrapper.orderByDesc("deleted_date");
+
         // recovery_file表中的数据
         List<RecoveryFile> recoveryFiles = this.list(queryWrapper);
 
@@ -52,7 +53,7 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
 
         for (RecoveryFile recoveryFile : recoveryFiles) {
             for (Fileinfo fileinfo : deletedFileinfoList) {
-                if (recoveryFile.getFileinfoId() == fileinfo.getId()){
+                if (recoveryFile.getFileinfoId().equals(fileinfo.getId())){
                     RecoveryFileVo vo = new RecoveryFileVo();
                     vo.setRecoveryFileId(recoveryFile.getId());
                     vo.setFileinfoId(fileinfo.getId());
@@ -83,7 +84,6 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
 
         // 将fileinfo表中被删除的文件信息恢复
         List<Fileinfo> deletedChildList = fileinfoService.getDeletedChildList(recoveryFile.getFileinfoId());
-
         List<Long> ids = new ArrayList<>();
         for (Fileinfo fileinfo : deletedChildList) {
             ids.add(fileinfo.getId());
@@ -93,4 +93,45 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
 
         return true;
     }
+
+    // 彻底删除文件
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteFile(Long id) {
+        RecoveryFile recoveryFile = this.getById(id);
+        if (recoveryFile == null) return false;
+
+        // 删除recoveryFile表中的记录
+        this.removeById(id);
+
+        // 彻底删除fileinfo表中的记录
+        List<Fileinfo> deletedChildList = fileinfoService.getDeletedChildList(recoveryFile.getFileinfoId());
+        List<Long> ids = new ArrayList<>();
+        for (Fileinfo fileinfo : deletedChildList) {
+            ids.add(fileinfo.getId());
+        }
+
+        fileinfoService.deleteFiles(ids);
+
+        return true;
+    }
+
+    // 批量删除
+    @Override
+    public boolean deleteFilesBatch(List<Long> ids) {
+        for (Long id : ids) {
+            deleteFile(id);
+        }
+        return true;
+    }
+
+    // 批量恢复
+    @Override
+    public boolean recoveryFilesBatch(List<Long> ids) {
+        for (Long id : ids) {
+            recoveryFile(id);
+        }
+        return false;
+    }
+
 }

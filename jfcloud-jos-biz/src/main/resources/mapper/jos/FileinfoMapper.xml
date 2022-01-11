@@ -10,6 +10,7 @@
          </foreach>
     </update>
 
+
     <select id="getChildList" resultType="com.github.jfcloud.jos.entity.Fileinfo">
         select id,name,permissions,parent_id,is_file,file_size,file_auther,jos_metadata_id,created_by,created_date,
         last_modified_by,last_modified_date,deleted_by,deleted_date,deleted_flag,db_id,path
@@ -38,5 +39,12 @@
             #{id}
         </foreach>
     </update>
+
+    <delete id="deleteFiles">
+        delete from jos_fileinfo where id in
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </delete>
 
 </mapper>

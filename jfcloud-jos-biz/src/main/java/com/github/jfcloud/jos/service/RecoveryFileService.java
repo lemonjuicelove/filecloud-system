@@ -20,4 +20,9 @@ public interface RecoveryFileService extends IService<RecoveryFile> {
 
     boolean recoveryFile(Long id);
 
+    boolean deleteFile(Long id);
+
+    boolean deleteFilesBatch(List<Long> ids);
+
+    boolean recoveryFilesBatch(List<Long> ids);
 }

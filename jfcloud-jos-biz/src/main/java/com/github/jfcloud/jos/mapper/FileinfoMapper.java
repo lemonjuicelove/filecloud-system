@@ -29,4 +29,5 @@ public interface FileinfoMapper extends BaseMapper<Fileinfo> {
 
     void recoveryFile(@Param("list") List<Long> ids);
 
+    void deleteFiles(@Param("list")List<Long> ids);
 }

@@ -1,6 +1,7 @@
 package com.github.jfcloud.jos.controller;
 
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.github.jfcloud.jos.entity.Fileinfo;
 import com.github.jfcloud.jos.entity.Metadata;
@@ -11,8 +12,10 @@ import com.github.jfcloud.jos.service.FileinfoService;
 import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.service.RecoveryFileService;
 import com.github.jfcloud.jos.util.*;
+import com.github.jfcloud.jos.vo.DirVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +27,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -65,6 +70,7 @@ public class FileinfoController {
         return flag ? CommonResult.ok() : CommonResult.error();
     }*/
 
+
     @ApiOperation("上传文件：分片上传")
     @PostMapping("/uploadFile/{parentId}")
     public CommonResult uploadFile(MultipartFileParam fileParam,
@@ -82,12 +88,12 @@ public class FileinfoController {
         }
 
         // 去后缀名
-        String prename = fileParam.getFileName().substring(0,fileParam.getFileName().indexOf("."));
+        String prename = UploadUtil.getPre(fileParam.getFileName());
 
         // 文件不存在，去Redis缓存中获取
         // key：整个文件名+md5    value：当前切片+md5
         String key = prename + "-" + fileParam.getWholeIdentifier();
-        String value = fileParam.getChunkNumber()+ "-" +fileParam.getIdentifier();
+        String value = fileParam.getChunkNumber() + "-" + fileParam.getIdentifier();
         if (redisUtil.hasKey(key)){
             List<Object> list = redisUtil.getList(key);
             for (Object o : list) {
@@ -140,14 +146,12 @@ public class FileinfoController {
         File file = UploadUtil.mergeFile(filename, metadata);
         if (file == null) return CommonResult.error();
 
-        // 删除临时文件
-        UploadUtil.deleteTempFile(filename,metadata);
-
         // fileinfo表中添加记录
         Fileinfo fileinfo = new Fileinfo();
         Fileinfo parentFile = fileinfoService.getById(parentId);
         if (parentFile == null) throw new BizException("上传文件失败");
-        if (parentFile.getId() != 1) fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
+
+        fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
         fileinfo.setParentId(parentId);
         fileinfo.setName(fileinfoService.getRepeatFileName(parentId,filename));
         fileinfo.setIsFile("0");
@@ -170,9 +174,11 @@ public class FileinfoController {
         fileinfo.setJosMetadataId(metadata1.getId());
         fileinfoService.save(fileinfo);
 
+        // 删除临时文件
+        UploadUtil.deleteTempFile(filename,metadata);
+
         return CommonResult.ok();
     }
-
 
     // test ok
     @ApiOperation("根据id查询文件信息")
@@ -190,7 +196,6 @@ public class FileinfoController {
         List<Fileinfo> fileinfos = fileinfoService.findFileByParentId(parentId,orderBy);
         return CommonResult.ok().data("子文件",fileinfos);
     }
-
 
     // test ok
     @ApiOperation("新建一个空文件")
@@ -261,15 +266,15 @@ public class FileinfoController {
     public void downloadFile(@PathVariable("id") Long id,
                              HttpServletResponse response){
 
-        // 获取文件的下载路径名
-        Metadata metadata = fileinfoService.downloadFile(id);
-        if (metadata == null) return;
+        // 获取文件的下载路径和文件名
+        Map<String, String> fileMap = fileinfoService.downloadFile(id);
+        if (fileMap == null) return;
 
         // 下载文件
         OutputStream os = null;
         FileInputStream input = null;
         try {
-            File f = new File(filePath);
+            File f = new File(fileMap.get("path"));
             input = new FileInputStream(f);
             byte[] buffer  = new byte[(int)f.length()];
             int offset = 0;
@@ -279,7 +284,7 @@ public class FileinfoController {
             }
             os = response.getOutputStream();
             response.setContentType(DownloadConstant.CONTENTTYPE);
-            response.setHeader(DownloadConstant.HEADNAME, DownloadConstant.HEADVALUE+ URLEncoder.encode(f.getName(), DownloadConstant.HEADENCODE));
+            response.setHeader(DownloadConstant.HEADNAME, DownloadConstant.HEADVALUE + URLEncoder.encode(fileMap.get("name"), DownloadConstant.HEADENCODE));
             os.write(buffer);
             os.flush();
         } catch (IOException e) {
@@ -302,14 +307,37 @@ public class FileinfoController {
         }
     }
 
-    /*@ApiOperation("测试分片上传")
-    @PostMapping("/testSlice")
-    public void testSlice(MultipartFile file){
-        File file1 = new File("C:\\Users\\73561\\Desktop\\bioradar\\real\\" + "d41d8cd98f00b204e9800998ecf8427e");
-        System.out.println(FileSafeCode.getMD5(file1)); // d41d8cd98f00b204e9800998ecf8427e
-        System.out.println(FileSafeCode.getSha1(file1)); // da39a3ee5e6b4b0d3255bfef95601890afd80709
-        System.out.println(FileSafeCode.getCRC32(file1)); // 0
-    }*/
+    @ApiOperation("文件移动")
+    @PostMapping("/moveFile/{sourceId}/{targetId}")
+    /**
+     *  sourceId：需要移动的文件的id
+     *  targetId：目标目录的id
+     */
+    public CommonResult moveFile(@PathVariable("sourceId") Long sourceId,
+                                 @PathVariable("targetId") Long targetId){
+
+        boolean move = fileinfoService.moveFile(sourceId, targetId);
+        return move ? CommonResult.ok() : CommonResult.error();
+    }
+
+    @ApiOperation("目录展示")
+    @PostMapping("/showDir/{parentId}")
+    public CommonResult showDir(@PathVariable("parentId") Long parentId){
+
+        QueryWrapper<Fileinfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("parent_id",parentId);
+        queryWrapper.select("id","name","parent_id");
+        queryWrapper.eq("is_file","1");
+        List<Fileinfo> list = fileinfoService.list(queryWrapper);
+        List<DirVo> dirs = new ArrayList<>();
+        for (Fileinfo fileinfo : list) {
+            DirVo dirVo = new DirVo();
+            BeanUtils.copyProperties(fileinfo,dirVo);
+            dirs.add(dirVo);
+        }
+
+        return CommonResult.ok().data("dirs",dirs);
+    }
 
 }
 

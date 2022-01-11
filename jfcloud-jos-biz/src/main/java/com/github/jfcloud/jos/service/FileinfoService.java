@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -31,7 +32,7 @@ public interface FileinfoService extends IService<Fileinfo> {
 
     boolean updateFile(Long id, String name);
 
-    Metadata downloadFile(Long id);
+    Map<String,String> downloadFile(Long id);
 
     // boolean existsFile(Long parentId, String fileName);
 
@@ -42,4 +43,8 @@ public interface FileinfoService extends IService<Fileinfo> {
     void recoveryFile(List<Long> ids);
 
     String getRepeatFileName(Long parentId, String fileName);
+
+    void deleteFiles(List<Long> ids);
+
+    boolean moveFile(Long sourceId, Long targetId);
 }
