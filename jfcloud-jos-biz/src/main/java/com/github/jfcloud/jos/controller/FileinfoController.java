@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
@@ -248,6 +249,27 @@ public class FileinfoController {
         return CommonResult.ok();
     }
 
+    @ApiOperation("根据id批量删除文件")
+    @DeleteMapping("/deleteFilesBatch")
+    @Transactional(rollbackFor = Exception.class)
+    public CommonResult deleteFilesBatch(@RequestBody List<Long> ids){
+
+        for (Long id : ids) {
+            Fileinfo fileinfo = fileinfoService.getById(id);
+            if (fileinfo != null){
+                fileinfoService.removeFile(fileinfo);
+                // 在回收站表中添加一条记录
+                RecoveryFile recoveryFile = new RecoveryFile();
+                recoveryFile.setFileinfoId(fileinfo.getId());
+                recoveryFile.setDeletedBy(19980218L);
+                recoveryFile.setDeletedDate(new Date());
+                recoveryFileService.save(recoveryFile);
+            }
+        }
+
+        return CommonResult.ok();
+    }
+
     // test ok
     @ApiOperation("根据id修改文件名")
     @PostMapping("/updateFile/{id}/{name}")
@@ -279,10 +301,18 @@ public class FileinfoController {
             byte[] buffer  = new byte[(int)f.length()];
             int offset = 0;
             int numRead = 0;
+            // 可以写空文件
             while (offset<buffer.length&&(numRead-input.read(buffer,offset,buffer.length-offset))>=0) {
                 offset+=numRead;
             }
             os = response.getOutputStream();
+            // 只能写非空文件
+            /*byte[] buffer  = new byte[1024*1024];
+            int readNum = 0;
+            while ((readNum = input.read(buffer)) != -1){
+                os.write(buffer,0,readNum);
+            }
+            os.flush();*/
             response.setContentType(DownloadConstant.CONTENTTYPE);
             response.setHeader(DownloadConstant.HEADNAME, DownloadConstant.HEADVALUE + URLEncoder.encode(fileMap.get("name"), DownloadConstant.HEADENCODE));
             os.write(buffer);
@@ -307,6 +337,15 @@ public class FileinfoController {
         }
     }
 
+    @ApiOperation("批量下载文件")
+    @GetMapping("/downloadFilesBatch")
+    public void downloadFilesBatch(@RequestBody List<Long> ids,
+                             HttpServletRequest request,
+                             HttpServletResponse response){
+
+        fileinfoService.downloadFilesBatch(ids,request,response);
+    }
+
     @ApiOperation("文件移动")
     @PostMapping("/moveFile/{sourceId}/{targetId}")
     /**
@@ -318,6 +357,21 @@ public class FileinfoController {
 
         boolean move = fileinfoService.moveFile(sourceId, targetId);
         return move ? CommonResult.ok() : CommonResult.error();
+    }
+
+    @ApiOperation("文件批量移动")
+    @PostMapping("/moveFilesBatch/{targetId}")
+    /**
+     *  ids：批量移动的文件id
+     *  targetId：目标目录的id
+     */
+    public CommonResult moveFilesBatch(@RequestBody List<Long> ids,
+                                 @PathVariable("targetId") Long targetId){
+
+        for (Long id : ids) {
+            fileinfoService.moveFile(id,targetId);
+        }
+        return CommonResult.ok();
     }
 
     @ApiOperation("目录展示")

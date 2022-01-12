@@ -47,4 +47,6 @@ public interface FileinfoService extends IService<Fileinfo> {
     void deleteFiles(List<Long> ids);
 
     boolean moveFile(Long sourceId, Long targetId);
+
+    void downloadFilesBatch(List<Long> ids, HttpServletRequest request, HttpServletResponse response);
 }

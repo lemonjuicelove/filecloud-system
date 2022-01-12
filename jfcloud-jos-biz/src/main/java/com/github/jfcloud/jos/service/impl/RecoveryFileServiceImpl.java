@@ -131,7 +131,7 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
         for (Long id : ids) {
             recoveryFile(id);
         }
-        return false;
+        return true;
     }
 
 }
