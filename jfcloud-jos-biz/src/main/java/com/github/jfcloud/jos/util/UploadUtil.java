@@ -3,7 +3,9 @@ package com.github.jfcloud.jos.util;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -101,6 +103,7 @@ public class UploadUtil {
         File file = new File(tempSavePath + pre + "-" + metadata);
         if (!file.exists()) return null;
 
+        // 将切片按顺序排列
         File[] files = file.listFiles();
         Arrays.sort(files, (t1, t2) -> {
             String name1 = t1.getName();
@@ -173,6 +176,53 @@ public class UploadUtil {
     // 根据文件名获取后缀
     public static String getPro(String filename){
         return filename.substring(filename.indexOf(".")+1);
+    }
+
+    // 下载文件
+    public static void downloadFile(String filename, String path, HttpServletResponse response){
+
+        OutputStream os = null;
+        FileInputStream input = null;
+        try {
+            File f = new File(path);
+            input = new FileInputStream(f);
+            byte[] buffer  = new byte[(int)f.length()];
+            int offset = 0;
+            int numRead = 0;
+            // 可以写空文件
+            while (offset<buffer.length&&(numRead-input.read(buffer,offset,buffer.length-offset))>=0) {
+                offset+=numRead;
+            }
+            // 只能写非空文件
+            /*byte[] buffer  = new byte[1024*1024];
+            int readNum = 0;
+            while ((readNum = input.read(buffer)) != -1){
+                os.write(buffer,0,readNum);
+            }
+            os.flush();*/
+            os = response.getOutputStream();
+            response.setContentType(DownloadConstant.CONTENTTYPE);
+            response.setHeader(DownloadConstant.HEADNAME, DownloadConstant.HEADVALUE + URLEncoder.encode(filename, DownloadConstant.HEADENCODE));
+            os.write(buffer);
+            os.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (input != null){
+                try {
+                    input.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (os != null){
+                try {
+                    os.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
 

@@ -35,6 +35,7 @@ public class FileShareLink implements Serializable {
     private Long fileId;
 
     @ApiModelProperty(value = "创建人")
+    @TableField(fill = FieldFill.INSERT)
     private Long createdBy;
 
     @ApiModelProperty(value = "创建时间")
@@ -42,6 +43,7 @@ public class FileShareLink implements Serializable {
     private Date createdDate;
 
     @ApiModelProperty(value = "修改人")
+    @TableField(fill = FieldFill.UPDATE)
     private Long lastModifiedBy;
 
     @ApiModelProperty(value = "上次修改时间")

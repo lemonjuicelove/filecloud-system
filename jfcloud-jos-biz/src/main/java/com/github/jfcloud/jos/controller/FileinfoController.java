@@ -1,13 +1,13 @@
 package com.github.jfcloud.jos.controller;
 
 
-import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.github.jfcloud.jos.entity.Fileinfo;
 import com.github.jfcloud.jos.entity.Metadata;
 import com.github.jfcloud.jos.entity.MultipartFileParam;
 import com.github.jfcloud.jos.entity.RecoveryFile;
 import com.github.jfcloud.jos.exception.BizException;
+import com.github.jfcloud.jos.service.FileShareService;
 import com.github.jfcloud.jos.service.FileinfoService;
 import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.service.RecoveryFileService;
@@ -19,7 +19,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -57,6 +56,9 @@ public class FileinfoController {
 
     @Autowired
     private RedisUtil redisUtil;
+
+    @Autowired
+    private FileShareService fileShareService;
 
 
     // test ok
@@ -202,7 +204,7 @@ public class FileinfoController {
     @ApiOperation("新建一个空文件")
     @PostMapping("/createContext/{parentId}")
     public CommonResult createContext(@PathVariable("parentId") Long parentId,
-                                  @RequestBody(required = false) Fileinfo fileinfo){
+                                  @RequestBody Fileinfo fileinfo){
         boolean save = fileinfoService.createContext(parentId, fileinfo);
         return save ? CommonResult.ok().message("新建成功") : CommonResult.error().message("新建失败");
     }
@@ -211,7 +213,7 @@ public class FileinfoController {
     @ApiOperation("新建一个目录")
     @PostMapping("/createDir/{parentId}")
     public CommonResult createDir(@PathVariable("parentId") Long parentId,
-                                  @RequestBody(required = false) Fileinfo fileinfo){
+                                  @RequestBody Fileinfo fileinfo){
         boolean save = fileinfoService.createDir(parentId, fileinfo);
         return save ? CommonResult.ok().message("新建成功") : CommonResult.error().message("新建失败");
     }
@@ -293,52 +295,11 @@ public class FileinfoController {
         if (fileMap == null) return;
 
         // 下载文件
-        OutputStream os = null;
-        FileInputStream input = null;
-        try {
-            File f = new File(fileMap.get("path"));
-            input = new FileInputStream(f);
-            byte[] buffer  = new byte[(int)f.length()];
-            int offset = 0;
-            int numRead = 0;
-            // 可以写空文件
-            while (offset<buffer.length&&(numRead-input.read(buffer,offset,buffer.length-offset))>=0) {
-                offset+=numRead;
-            }
-            os = response.getOutputStream();
-            // 只能写非空文件
-            /*byte[] buffer  = new byte[1024*1024];
-            int readNum = 0;
-            while ((readNum = input.read(buffer)) != -1){
-                os.write(buffer,0,readNum);
-            }
-            os.flush();*/
-            response.setContentType(DownloadConstant.CONTENTTYPE);
-            response.setHeader(DownloadConstant.HEADNAME, DownloadConstant.HEADVALUE + URLEncoder.encode(fileMap.get("name"), DownloadConstant.HEADENCODE));
-            os.write(buffer);
-            os.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (input != null){
-                try {
-                    input.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (os != null){
-                try {
-                    os.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+        UploadUtil.downloadFile(fileMap.get("name"),fileMap.get("path"),response);
     }
 
     @ApiOperation("批量下载文件")
-    @GetMapping("/downloadFilesBatch")
+    @PostMapping("/downloadFilesBatch")
     public void downloadFilesBatch(@RequestBody List<Long> ids,
                              HttpServletRequest request,
                              HttpServletResponse response){
@@ -375,7 +336,7 @@ public class FileinfoController {
     }
 
     @ApiOperation("目录展示")
-    @PostMapping("/showDir/{parentId}")
+    @GetMapping("/showDir/{parentId}")
     public CommonResult showDir(@PathVariable("parentId") Long parentId){
 
         QueryWrapper<Fileinfo> queryWrapper = new QueryWrapper<>();
@@ -392,6 +353,7 @@ public class FileinfoController {
 
         return CommonResult.ok().data("dirs",dirs);
     }
+
 
 }
 

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.Date;
 
 /**
@@ -25,7 +26,7 @@ public class FileShare implements Serializable {
 
     private static final long serialVersionUID=1L;
 
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableField(fill = FieldFill.INSERT)
     private Long id;
 
     @ApiModelProperty(value = "分享文件名")
@@ -62,6 +63,7 @@ public class FileShare implements Serializable {
     private Long downloadCount;
 
     @ApiModelProperty(value = "创建人")
+    @TableField(fill = FieldFill.INSERT)
     private Long createdBy;
 
     @ApiModelProperty(value = "创建时间")
@@ -69,6 +71,7 @@ public class FileShare implements Serializable {
     private Date createdDate;
 
     @ApiModelProperty(value = "修改人")
+    @TableField(fill = FieldFill.UPDATE)
     private Long lastModifiedBy;
 
     @ApiModelProperty(value = "上次修改时间")
