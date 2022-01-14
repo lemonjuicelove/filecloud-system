@@ -17,4 +17,6 @@ public class JfleConfProperties {
     private ThumbImage thumbImage = new ThumbImage();
     private MinioConfig minio = new MinioConfig();
     private QiniuyunConfig qiniuyun = new QiniuyunConfig();
+
+
 }

@@ -53,6 +53,9 @@ public class FileShare implements Serializable {
     @ApiModelProperty(value = "失效标志 0/1 失效/未失效")
     private String isEffective;
 
+    @ApiModelProperty(value = "访问次数限制")
+    private Long maxCount;
+
     @ApiModelProperty(value = "浏览次数")
     private Long viewCount;
 

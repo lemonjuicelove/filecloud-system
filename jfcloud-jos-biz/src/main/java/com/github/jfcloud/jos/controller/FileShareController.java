@@ -5,21 +5,17 @@ import com.github.jfcloud.jos.entity.Metadata;
 import com.github.jfcloud.jos.service.FileShareService;
 import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.util.CommonResult;
-import com.github.jfcloud.jos.util.DownloadConstant;
 import com.github.jfcloud.jos.util.UploadUtil;
 import com.github.jfcloud.jos.vo.SaveShareFileVo;
 import com.github.jfcloud.jos.vo.ShareFileVo;
+import com.github.jfcloud.jos.vo.ShowShareFileVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URLEncoder;
 import java.util.Map;
 
 /**
@@ -43,23 +39,22 @@ public class FileShareController {
 
 
     @ApiOperation("文件分享")
-    @GetMapping("/shareFile/{fileId}/{time}")
+    @PostMapping("/shareFile")
     /*
         fileId：文件id
         time：有效天数
      */
-    public CommonResult shareFile(@PathVariable("fileId") Long id,
-                                  @PathVariable("time") Integer time){
+    public CommonResult shareFile(@RequestBody ShareFileVo shareFileVo){
 
 
-        Map<String, Object> shareInfo = fileShareService.shareFile(id, time);
+        Map<String, Object> shareInfo = fileShareService.shareFile(shareFileVo);
 
         return CommonResult.ok().data(shareInfo);
     }
 
-
     @ApiOperation("通过链接和提取码获取分享文件")
     @GetMapping("/showShareFile/{linkAddress}/{extractCode}")
+    @Transactional(rollbackFor = Exception.class)
     /*
         linkAddress：链接
         extractCode：提取码
@@ -68,16 +63,17 @@ public class FileShareController {
                                       @PathVariable("extractCode") String extractCode){
 
         // 根据链接和提取码去share表和share_link表中查数据，并封装成vo
-        ShareFileVo shareFileVo = fileShareService.showShareFile(linkAddress, extractCode);
+        ShowShareFileVo showShareFileVo = fileShareService.showShareFile(linkAddress, extractCode);
 
         // share文件中的view+1
-        fileShareService.updateView(shareFileVo.getShareId());
+        fileShareService.updateView(showShareFileVo.getShareId());
 
-        return CommonResult.ok().data("分享文件",shareFileVo);
+        return CommonResult.ok().data("分享文件",showShareFileVo);
     }
 
     @ApiOperation("保存分享文件")
     @PostMapping("/saveShareFile")
+    @Transactional(rollbackFor = Exception.class)
     /*
         parentId：保存的位置
         metadataId：元数据id

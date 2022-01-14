@@ -14,6 +14,7 @@ import com.github.jfcloud.jos.service.FileinfoService;
 import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.util.DateUtil;
 import com.github.jfcloud.jos.vo.ShareFileVo;
+import com.github.jfcloud.jos.vo.ShowShareFileVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,17 +48,17 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
     // 分享文件
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Map<String,Object> shareFile(Long id,Integer time) {
+    public Map<String,Object> shareFile(ShareFileVo shareFileVo) {
 
-        if (time < 0) return null;
+        if (shareFileVo == null) return null;
 
-        Fileinfo fileinfo = fileinfoService.getById(id);
+        Fileinfo fileinfo = fileinfoService.getById(shareFileVo.getId());
         if (fileinfo == null || "1".equals(fileinfo.getIsFile())) return null;
 
         // share表添加记录
         FileShare fileShare = new FileShare();
         fileShare.setName(fileinfo.getName());
-        fileShare.setEffectiveDate(DateUtil.addDays(new Date(),time));
+        fileShare.setEffectiveDate(DateUtil.addDays(new Date(),shareFileVo.getTime()));
         // 生成提取码和链接
         String uuid = UUID.randomUUID().toString().replace("-", "");
         String extractCode = RandomUtil.randomNumbers(6);
@@ -67,6 +68,7 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         fileShare.setSharerId(19980218L);
         fileShare.setShareTime(new Date());
         fileShare.setIsEffective("1");
+        fileShare.setMaxCount(shareFileVo.getMaxCount());
 
         this.save(fileShare);
 
@@ -85,7 +87,7 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
 
     // 查看分享文件的信息
     @Override
-    public ShareFileVo showShareFile(String linkAddress, String extractCode) {
+    public ShowShareFileVo showShareFile(String linkAddress, String extractCode) {
 
         // 根据链接和提取码去share表和share_link表中查数据，并封装成vo
         QueryWrapper<FileShare> queryWrapper = new QueryWrapper<>();
@@ -96,8 +98,9 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         if (fileShare == null) return null;
 
         // 验证有效期是否过期
-        if (fileShare.getEffectiveDate().before(new Date())){
-            // 过期了，设置过期标志
+        // 验证访问人数是否超过限制
+        if (fileShare.getEffectiveDate().before(new Date()) || fileShare.getViewCount() > fileShare.getMaxCount()){
+            // 失效
             fileShare.setIsEffective("0");
             this.updateById(fileShare);
             return null;
@@ -113,16 +116,16 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         Fileinfo fileinfo = fileinfoService.getById(fileShareLink.getFileId());
         if (fileinfo == null) return null;
 
-        ShareFileVo shareFileVo = new ShareFileVo();
-        shareFileVo.setName(fileinfo.getName());
-        shareFileVo.setShareId(fileShare.getId());
-        shareFileVo.setMetadataId(fileinfo.getJosMetadataId());
-        shareFileVo.setFileSize(fileinfo.getFileSize());
-        shareFileVo.setShareTime(fileShare.getShareTime());
-        shareFileVo.setEndTime(fileShare.getEffectiveDate());
-        shareFileVo.setUserName("lemonjuice");
+        ShowShareFileVo showShareFileVo = new ShowShareFileVo();
+        showShareFileVo.setName(fileinfo.getName());
+        showShareFileVo.setShareId(fileShare.getId());
+        showShareFileVo.setMetadataId(fileinfo.getJosMetadataId());
+        showShareFileVo.setFileSize(fileinfo.getFileSize());
+        showShareFileVo.setShareTime(fileShare.getShareTime());
+        showShareFileVo.setEndTime(fileShare.getEffectiveDate());
+        showShareFileVo.setUserName("lemonjuice");
 
-        return shareFileVo;
+        return showShareFileVo;
     }
 
     // 保存分享的文件

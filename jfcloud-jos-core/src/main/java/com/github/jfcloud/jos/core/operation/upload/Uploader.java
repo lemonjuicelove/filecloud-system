@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 public abstract class Uploader {
+
     @Resource
     RedisLock redisLock;
     @Resource

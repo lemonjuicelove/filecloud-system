@@ -24,12 +24,14 @@ import com.github.jfcloud.jos.core.operation.write.product.*;
 import javax.annotation.Resource;
 
 public class FileOPactory {
+
     private String storageType;
     private String localStoragePath;
     private AliyunConfig aliyunConfig;
     private ThumbImage thumbImage;
     private MinioConfig minioConfig;
     private QiniuyunConfig qiniuyunConfig;
+
     @Resource
     private FastDFSCopier fastDFSCopier;
     @Resource
@@ -97,7 +99,6 @@ public class FileOPactory {
         }
         return downloader;
     }
-
 
     public Deleter getDeleter(int storageType) {
         Deleter deleter = null;
@@ -179,4 +180,5 @@ public class FileOPactory {
         }
         return copier;
     }
+
 }

@@ -3,6 +3,7 @@ package com.github.jfcloud.jos.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.github.jfcloud.jos.entity.FileShare;
 import com.github.jfcloud.jos.vo.ShareFileVo;
+import com.github.jfcloud.jos.vo.ShowShareFileVo;
 
 import java.util.Map;
 
@@ -16,9 +17,9 @@ import java.util.Map;
  */
 public interface FileShareService extends IService<FileShare> {
 
-    Map<String,Object> shareFile(Long id, Integer time);
+    Map<String,Object> shareFile(ShareFileVo shareFileVo);
 
-    ShareFileVo showShareFile(String linkAddress, String extractCode);
+    ShowShareFileVo showShareFile(String linkAddress, String extractCode);
 
     boolean saveShareFile(Long parentId, Long metadataId, String filename);
 

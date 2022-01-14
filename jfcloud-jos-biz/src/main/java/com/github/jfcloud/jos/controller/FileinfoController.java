@@ -11,7 +11,10 @@ import com.github.jfcloud.jos.service.FileShareService;
 import com.github.jfcloud.jos.service.FileinfoService;
 import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.service.RecoveryFileService;
-import com.github.jfcloud.jos.util.*;
+import com.github.jfcloud.jos.util.CommonResult;
+import com.github.jfcloud.jos.util.FileSafeCode;
+import com.github.jfcloud.jos.util.RedisUtil;
+import com.github.jfcloud.jos.util.UploadUtil;
 import com.github.jfcloud.jos.vo.DirVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -23,10 +26,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -59,20 +58,6 @@ public class FileinfoController {
 
     @Autowired
     private FileShareService fileShareService;
-
-
-    // test ok
-    /*@ApiOperation("上传文件：断点上传")
-    @PostMapping("/addFile/{parentId}")
-    public CommonResult addFile(MultipartFile file,
-                                @PathVariable("parentId") Long parentId,
-                                HttpServletRequest request,HttpServletResponse response){
-
-        boolean flag = fileinfoService.addFile(file, parentId,request,response);
-
-        return flag ? CommonResult.ok() : CommonResult.error();
-    }*/
-
 
     @ApiOperation("上传文件：分片上传")
     @PostMapping("/uploadFile/{parentId}")
@@ -353,7 +338,6 @@ public class FileinfoController {
 
         return CommonResult.ok().data("dirs",dirs);
     }
-
 
 }
 

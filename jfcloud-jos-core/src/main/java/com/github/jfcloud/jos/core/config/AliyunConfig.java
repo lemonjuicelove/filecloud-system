@@ -5,6 +5,7 @@ import lombok.Data;
 
 @Data
 public class  AliyunConfig {
+
     private AliyunOSS oss = new AliyunOSS();
 
 
