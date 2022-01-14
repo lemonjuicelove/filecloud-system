@@ -1,6 +1,7 @@
 package com.github.jfcloud.jos.core.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -8,10 +9,13 @@ import javax.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class RedisUtil {
- 
-    @Resource
-    RedisTemplate<String, Object> josRedisTemplate;
+public class RedisUtils {
+
+    public RedisUtils(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 将值放入缓存
@@ -19,7 +23,7 @@ public class RedisUtil {
      * @param value 值
      */
     public void set(String key, Object value) {
-        josRedisTemplate.opsForValue().set(key, value);
+        redisTemplate.opsForValue().set(key, value);
     }
 
     /**
@@ -29,7 +33,7 @@ public class RedisUtil {
      * @return 返回值
      */
     public <T> T getObject(String key) {
-        Object o = josRedisTemplate.opsForValue().get(key);
+        Object o = redisTemplate.opsForValue().get(key);
         if (o != null) {
             return (T) o;
         }
@@ -44,15 +48,15 @@ public class RedisUtil {
      */
     public void set(String key, Object value, long time) {
         if (time > 0) {
-            josRedisTemplate.opsForValue().set(key, value, time, TimeUnit.SECONDS);
+            redisTemplate.opsForValue().set(key, value, time, TimeUnit.SECONDS);
         } else {
-            josRedisTemplate.opsForValue().set(key, value);
+            redisTemplate.opsForValue().set(key, value);
         }
     }
 
 
     public boolean hasKey(String key) {
-        return josRedisTemplate.hasKey(key);
+        return redisTemplate.hasKey(key);
     }
 
     /**
@@ -60,7 +64,7 @@ public class RedisUtil {
      * @param key key
      */
     public void deleteKey(String key) {
-        josRedisTemplate.delete(key);
+        redisTemplate.delete(key);
     }
 
     /**
@@ -69,7 +73,7 @@ public class RedisUtil {
      * @return 返回增长之后的值
      */
     public Long getIncr(String key) {
-        Long count = josRedisTemplate.opsForValue().increment(key, 1);
+        Long count = redisTemplate.opsForValue().increment(key, 1);
         return count;
     }
 

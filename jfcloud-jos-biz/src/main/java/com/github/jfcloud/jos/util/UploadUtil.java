@@ -33,26 +33,6 @@ public class UploadUtil {
         tempSavePath = (String) InitialCache.getCacheMap().get("local_temp");
     }
 
-    // 新建空文件
-    /*public static File createFile(String filename){
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(realSavePath + filename);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return null;
-        }finally {
-            if (fos != null){
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return new File(realSavePath + filename);
-    }*/
-
     // 上传切片文件
     public static boolean uploadFile(MultipartFile file,String dirname,String filename){
         if (file.equals("") || file.getSize() <= 0) {

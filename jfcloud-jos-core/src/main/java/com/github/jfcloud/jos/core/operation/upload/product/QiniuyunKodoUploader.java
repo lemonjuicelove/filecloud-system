@@ -18,7 +18,7 @@ import com.github.jfcloud.jos.core.operation.upload.domain.UploadFile;
 import com.github.jfcloud.jos.core.operation.upload.domain.UploadFileResult;
 import com.github.jfcloud.jos.core.operation.upload.request.QiwenMultipartFile;
 import com.github.jfcloud.jos.core.util.QiniuyunUtils;
-import com.github.jfcloud.jos.core.util.RedisUtil;
+import com.github.jfcloud.jos.core.util.RedisUtils;
 import com.github.jfcloud.jos.core.util.CusFileUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,7 +32,7 @@ public class QiniuyunKodoUploader extends Uploader {
     private QiniuyunConfig qiniuyunConfig;
 
     @Resource
-    RedisUtil redisUtil;
+    RedisUtils redisUtils;
 
     public QiniuyunKodoUploader(){
 

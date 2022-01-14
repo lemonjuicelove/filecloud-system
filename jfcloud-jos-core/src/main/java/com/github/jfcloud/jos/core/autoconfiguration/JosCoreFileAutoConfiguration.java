@@ -12,13 +12,18 @@ import com.github.jfcloud.jos.core.operation.upload.product.MinioUploader;
 import com.github.jfcloud.jos.core.operation.upload.product.QiniuyunKodoUploader;
 import com.github.jfcloud.jos.core.operation.write.product.FastDFSWriter;
 import com.github.jfcloud.jos.core.util.CusFileUtils;
-import com.github.jfcloud.jos.core.util.RedisUtil;
+import com.github.jfcloud.jos.core.util.RedisUtils;
 import com.github.jfcloud.jos.core.util.concurrent.locks.RedisLock;
+import com.github.tobato.fastdfs.service.AppendFileStorageClient;
+import com.github.tobato.fastdfs.service.DefaultAppendFileStorageClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisTemplate;
+
+import javax.annotation.Resource;
 
 
 @Slf4j
@@ -35,6 +40,8 @@ public class JosCoreFileAutoConfiguration {
         CusFileUtils.LOCAL_STORAGE_PATH = jfleConfProperties.getLocalStoragePath();
         return new FileOPactory(jfleConfProperties);
     }
+
+
     @Bean
     public FastDFSCopier fastDFSCreater() {
         return new FastDFSCopier();
@@ -85,14 +92,19 @@ public class JosCoreFileAutoConfiguration {
         return new QiniuyunKodoUploader(jfleConfProperties.getQiniuyun());
     }
 
+    @Autowired
+    private RedisTemplate redisTemplate;
+
     @Bean
     public RedisLock redisLock() {
-        return new RedisLock();
+        return new RedisLock(redisTemplate);
     }
 
     @Bean
-    public RedisUtil redisUtil() {
-        return new RedisUtil();
+    public RedisUtils redisUtils() {
+        return new RedisUtils(redisTemplate);
     }
+
+
 
 }

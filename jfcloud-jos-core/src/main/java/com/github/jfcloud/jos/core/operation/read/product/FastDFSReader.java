@@ -1,6 +1,7 @@
 package com.github.jfcloud.jos.core.operation.read.product;
 
 import com.github.tobato.fastdfs.proto.storage.DownloadByteArray;
+import com.github.tobato.fastdfs.service.DefaultFastFileStorageClient;
 import com.github.tobato.fastdfs.service.FastFileStorageClient;
 import com.github.jfcloud.jos.core.exception.operation.ReadException;
 import com.github.jfcloud.jos.core.operation.read.Reader;
@@ -17,8 +18,8 @@ import java.io.InputStream;
 
 @Slf4j
 public class FastDFSReader extends Reader {
-    @Autowired
-    private FastFileStorageClient fastFileStorageClient;
+//    @Autowired
+    private FastFileStorageClient fastFileStorageClient = new DefaultFastFileStorageClient();
     @Override
     public String read(ReadFile readFile) {
 

@@ -32,8 +32,10 @@ public class RedisLock {
 
     private static final long LOCK_EXPIRE_TIME = 60 * 5; //获取锁最大5分钟就会过期
 
+    public RedisLock(RedisTemplate<String, Object> josRedisTemplate) {
+        this.josRedisTemplate = josRedisTemplate;
+    }
 
-    @Resource
     RedisTemplate<String, Object> josRedisTemplate;
 
     static {

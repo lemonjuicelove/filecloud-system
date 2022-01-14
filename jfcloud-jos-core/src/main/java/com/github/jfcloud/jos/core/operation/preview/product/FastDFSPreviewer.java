@@ -1,6 +1,7 @@
 package com.github.jfcloud.jos.core.operation.preview.product;
 
 import com.github.tobato.fastdfs.proto.storage.DownloadByteArray;
+import com.github.tobato.fastdfs.service.DefaultFastFileStorageClient;
 import com.github.tobato.fastdfs.service.FastFileStorageClient;
 import com.github.jfcloud.jos.core.domain.ThumbImage;
 import com.github.jfcloud.jos.core.operation.preview.Previewer;
@@ -15,8 +16,8 @@ import java.io.InputStream;
 @Slf4j
 public class FastDFSPreviewer extends Previewer {
 
-    @Autowired
-    private FastFileStorageClient fastFileStorageClient;
+//    @Autowired
+    private FastFileStorageClient fastFileStorageClient = new DefaultFastFileStorageClient();
 
     public FastDFSPreviewer(){}
 

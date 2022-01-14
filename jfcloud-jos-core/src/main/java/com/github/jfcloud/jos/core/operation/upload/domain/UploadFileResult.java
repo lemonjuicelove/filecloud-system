@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 
 @Data
 public class UploadFileResult {
+
     private String fileName;
     private String extendName;
     private long fileSize;

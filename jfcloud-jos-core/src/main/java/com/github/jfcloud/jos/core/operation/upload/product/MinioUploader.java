@@ -8,7 +8,7 @@ import com.github.jfcloud.jos.core.operation.upload.Uploader;
 import com.github.jfcloud.jos.core.operation.upload.domain.UploadFile;
 import com.github.jfcloud.jos.core.operation.upload.domain.UploadFileResult;
 import com.github.jfcloud.jos.core.operation.upload.request.QiwenMultipartFile;
-import com.github.jfcloud.jos.core.util.RedisUtil;
+import com.github.jfcloud.jos.core.util.RedisUtils;
 import com.github.jfcloud.jos.core.util.CusFileUtils;
 import io.minio.MinioClient;
 import io.minio.PutObjectOptions;
@@ -29,7 +29,7 @@ public class MinioUploader extends Uploader {
     private MinioConfig minioConfig;
 
     @Resource
-    RedisUtil redisUtil;
+    RedisUtils redisUtils;
 
     public MinioUploader(){
 

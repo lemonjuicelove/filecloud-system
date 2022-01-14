@@ -1,6 +1,7 @@
 package com.github.jfcloud.jos.core.operation.download.product;
 
 import com.github.tobato.fastdfs.proto.storage.DownloadByteArray;
+import com.github.tobato.fastdfs.service.DefaultFastFileStorageClient;
 import com.github.tobato.fastdfs.service.FastFileStorageClient;
 import com.github.jfcloud.jos.core.operation.download.Downloader;
 import com.github.jfcloud.jos.core.operation.download.domain.DownloadFile;
@@ -13,8 +14,9 @@ import java.io.InputStream;
 
 @Slf4j
 public class FastDFSDownloader extends Downloader {
-    @Autowired
-    private FastFileStorageClient fastFileStorageClient;
+
+//    @Autowired
+    private FastFileStorageClient fastFileStorageClient = new DefaultFastFileStorageClient();
 //    @Override
 //    public void download(HttpServletResponse httpServletResponse, DownloadFile downloadFile) {
 //        String group = downloadFile.getFileUrl().substring(0, downloadFile.getFileUrl().indexOf("/"));

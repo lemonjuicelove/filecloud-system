@@ -94,11 +94,11 @@
         </dependency>
 
         <!-- 存储核心模块 -->
-        <!--        <dependency>-->
-        <!--            <groupId>com.github.jfcloud</groupId>-->
-        <!--            <artifactId>jfcloud-jos-core</artifactId>-->
-        <!--            <version>jfcloud.v42.1</version>-->
-        <!--        </dependency>-->
+                <dependency>
+                    <groupId>com.github.jfcloud</groupId>
+                    <artifactId>jfcloud-jos-core</artifactId>
+                    <version>jfcloud.v42.1</version>
+                </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
