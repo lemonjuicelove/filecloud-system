@@ -1,19 +1,22 @@
 package com.github.jfcloud.jos.core.operation.upload.product;
 
+import com.github.jfcloud.jos.core.common.StorageTypeEnum;
+import com.github.jfcloud.jos.core.common.UploadFileStatusEnum;
 import com.github.jfcloud.jos.core.config.LocalConfig;
 import com.github.jfcloud.jos.core.exception.operation.UploadException;
 import com.github.jfcloud.jos.core.operation.upload.Uploader;
+import com.github.jfcloud.jos.core.operation.upload.entity.UploadFile;
+import com.github.jfcloud.jos.core.operation.upload.entity.UploadFileResults;
 import com.github.jfcloud.jos.core.util.FileUtil;
-import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.util.Arrays;
 
 /*
-    本地存储实现类
+    本地存储实现类：文件上传
  */
-public class LocalStorageUploader extends Uploader {
+public class LocalStorageUploader implements Uploader {
 
     private LocalConfig localConfig;
 
@@ -27,7 +30,13 @@ public class LocalStorageUploader extends Uploader {
 
     // 上传切片文件
     @Override
-    public void upload(MultipartFile file, String dirname, String filename) {
+    public UploadFileResults upload(UploadFile uploadFile) {
+
+        MultipartFile file = uploadFile.getFile();
+        String pre = FileUtil.getPre(uploadFile.getFileName());
+        String dirname = pre + "-" + uploadFile.getWholeIdentifier();
+        String filename = uploadFile.getChunkNumber() + "-" + uploadFile.getIdentifier();
+
         if (file.equals("") || file.getSize() <= 0) {
             throw new UploadException("上传文件出现异常");
         }
@@ -65,11 +74,25 @@ public class LocalStorageUploader extends Uploader {
                 }
             }
         }
+
+        UploadFileResults results = new UploadFileResults();
+        results.setFileName(uploadFile.getWholeIdentifier());
+        results.setStorageType(StorageTypeEnum.LOCAL);
+
+        if (uploadFile.getChunkNumber() == uploadFile.getTotalChunks()){ // 说明是最后一片切片，合并切片
+            File mergeFile = mergeFile(uploadFile.getFileName(), uploadFile.getWholeIdentifier());
+            results.setFileSize(mergeFile.length());
+            results.setFileUrl(mergeFile.getAbsolutePath());
+            results.setStatus(UploadFileStatusEnum.SUCCESS);
+        }else{ // 不是最后一片切片
+            results.setStatus(UploadFileStatusEnum.UNCOMPLATE);
+        }
+
+        return results;
     }
 
     // 合并切片文件
-    @Override
-    public File mergeFile(String filename,String metadata){
+    private File mergeFile(String filename,String metadata){
 
         String pre = FileUtil.getPre(filename);
         File file = new File(localConfig.getTempPath() + "\\" + pre + "-" + metadata);
@@ -121,7 +144,7 @@ public class LocalStorageUploader extends Uploader {
     }
 
     // 删除临时文件
-    public void deleteTempFile(String filename,String metadata) {
+    private void deleteTempFile(String filename,String metadata) {
         String pre = FileUtil.getPre(filename);
         File file = new File(localConfig.getTempPath() + "\\" + pre + "-" + metadata);
         if (file.exists()){

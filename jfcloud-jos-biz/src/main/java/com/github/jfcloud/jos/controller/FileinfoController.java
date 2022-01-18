@@ -2,6 +2,7 @@ package com.github.jfcloud.jos.controller;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.github.jfcloud.jos.core.factory.FileOperatorFactory;
 import com.github.jfcloud.jos.entity.Fileinfo;
 import com.github.jfcloud.jos.entity.Metadata;
 import com.github.jfcloud.jos.entity.MultipartFileParam;
@@ -58,6 +59,9 @@ public class FileinfoController {
 
     @Autowired
     private FileShareService fileShareService;
+
+    @Autowired
+    private FileOperatorFactory fileOperatorFactory;
 
     @ApiOperation("上传文件：分片上传")
     @PostMapping("/uploadFile/{parentId}")

@@ -11,11 +11,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class RedisUtils {
 
+    RedisTemplate<String, Object> redisTemplate;
+
     public RedisUtils(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
-
-    RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 将值放入缓存

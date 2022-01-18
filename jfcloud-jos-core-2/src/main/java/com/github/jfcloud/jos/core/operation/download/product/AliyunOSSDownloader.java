@@ -1,34 +1,43 @@
 package com.github.jfcloud.jos.core.operation.download.product;
 
-import com.github.jfcloud.jos.core.exception.operation.DownloadException;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.OSSObject;
+import com.github.jfcloud.jos.core.config.AliyunConfig;
 import com.github.jfcloud.jos.core.operation.download.Downloader;
 import com.github.jfcloud.jos.core.operation.download.entity.DownloadFile;
+import com.github.jfcloud.jos.core.util.AliyunUtils;
 import com.github.jfcloud.jos.core.util.DateUtil;
-import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.net.URLEncoder;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/*
-    本地存储实现类：文件下载
- */
-@Component
-public class LocalStorageDownloader implements Downloader {
+public class AliyunOSSDownloader implements Downloader {
 
-    // 文件下载
+    private AliyunConfig aliyunConfig;
+
+    public AliyunOSSDownloader() {
+    }
+
+    public AliyunOSSDownloader(AliyunConfig aliyunConfig) {
+        this.aliyunConfig = aliyunConfig;
+    }
+
     @Override
     public void download(DownloadFile downloadFile, HttpServletRequest request, HttpServletResponse response) {
 
+        OSS ossClient = AliyunUtils.getOSSClient(aliyunConfig);
+        OSSObject ossObject = ossClient.getObject(aliyunConfig.getOss().getBucketName(), downloadFile.getMetadata());
+
         OutputStream os = null;
-        FileInputStream input = null;
+        InputStream stream = ossObject.getObjectContent();
         String filename = downloadFile.getFilename();
+
         try {
             // 设置返回客户端浏览器，解决文件名乱码问题
             String agent = request.getHeader("USER-AGENT");
@@ -42,22 +51,18 @@ public class LocalStorageDownloader implements Downloader {
                 }
             }catch (Exception e){
                 e.printStackTrace();
-                throw new DownloadException("文件下载错误");
+                throw new RuntimeException("文件下载错误");
             }
             response.setContentType("PPLICATION/OCTET-STREAM");
             response.setHeader("Content-Disposition", "attachment;filename=" + filename);
 
-            File f = new File(downloadFile.getPath());
-            input = new FileInputStream(f);
-            os = response.getOutputStream();
-
             byte[] buffer  = new byte[1024*1024];
-
-            if (input.available() == 0){ // 空文件
+            os = response.getOutputStream();
+            if (stream.available() == 0){ // 空文件
                 os.write(buffer,0,0);
             }else{ // 非空文件
                 int numRead = 0;
-                while((numRead = input.read(buffer)) != -1){
+                while((numRead = stream.read(buffer)) != -1){
                     os.write(buffer,0,numRead);
                 }
             }
@@ -66,9 +71,9 @@ public class LocalStorageDownloader implements Downloader {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            if (input != null){
+            if (stream != null){
                 try {
-                    input.close();
+                    stream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -81,9 +86,9 @@ public class LocalStorageDownloader implements Downloader {
                 }
             }
         }
+
     }
 
-    // 批量文件下载
     @Override
     public void downloadBatch(List<DownloadFile> downloadFiles, HttpServletRequest request, HttpServletResponse response) {
 
@@ -126,35 +131,33 @@ public class LocalStorageDownloader implements Downloader {
         // 将文件写入压缩流
         DataOutputStream dos = null;
 
+        OSS ossClient = AliyunUtils.getOSSClient(aliyunConfig);
         for (DownloadFile downloadFile : downloadFiles) {
-            File file = new File(downloadFile.getPath());
-            if (!file.exists()){
-                throw new DownloadException("文件不存在");
-            }else{
-                FileInputStream fis = null;
-                try{
-                    zipos.putNextEntry(new ZipEntry(downloadFile.getFilename()));
-                    dos = new DataOutputStream(zipos);
-                    fis = new FileInputStream(file);
-                    byte[] buffer = new byte[1024*1024];
-                    int readNum = 0;
-                    while ((readNum = fis.read(buffer)) != -1){
-                        dos.write(buffer,0,readNum);
-                    }
-                    dos.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }finally {
-                    if (fis != null){
-                        try {
-                            fis.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+            OSSObject ossObject = ossClient.getObject(aliyunConfig.getOss().getBucketName(), downloadFile.getMetadata());
+            InputStream is = ossObject.getObjectContent();
+
+            try {
+                zipos.putNextEntry(new ZipEntry(downloadFile.getFilename()));
+                dos = new DataOutputStream(zipos);
+                byte[] buffer = new byte[1024*1024];
+                int readNum = 0;
+                while ((readNum = is.read(buffer)) != -1){
+                    dos.write(buffer,0,readNum);
+                }
+                dos.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }finally {
+                if (is != null){
+                    try {
+                        is.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
             }
         }
+        ossClient.shutdown();
 
         if (dos != null){
             try {
@@ -170,6 +173,7 @@ public class LocalStorageDownloader implements Downloader {
                 e.printStackTrace();
             }
         }
+
     }
 
 }

@@ -1,16 +1,19 @@
 package com.github.jfcloud.jos.core.operation.upload;
 
+import com.aliyun.oss.model.UploadFileResult;
+import com.github.jfcloud.jos.core.operation.upload.entity.UploadFile;
+import com.github.jfcloud.jos.core.operation.upload.entity.UploadFileResults;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 
-public abstract class Uploader {
+public interface Uploader {
 
     // 文件上传
-    public abstract void upload(MultipartFile file, String dirname, String filename);
+    UploadFileResults upload(UploadFile uploadFile);
 
     // 合并切片
-    public abstract File mergeFile(String filename, String metadata);
+    // public abstract File mergeFile(String filename, String metadata);
 
 
 

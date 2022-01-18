@@ -1,5 +1,6 @@
 package com.github.jfcloud.jos.core.autoconfiguration;
 
+import com.github.jfcloud.jos.core.config.AliyunConfig;
 import com.github.jfcloud.jos.core.config.LocalConfig;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -13,5 +14,8 @@ public class JosCoreFileConfProperties {
 
     // 本地存储
     private LocalConfig local = new LocalConfig();
+
+    // 阿里云存储
+    private AliyunConfig aliyun = new AliyunConfig();
 
 }

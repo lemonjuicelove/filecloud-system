@@ -15,6 +15,5 @@ public class UploadFileResult {
     private String fileUrl;
     private StorageTypeEnum storageType;
     private UploadFileStatusEnum status;
-    private BufferedImage bufferedImage;
 
 }
