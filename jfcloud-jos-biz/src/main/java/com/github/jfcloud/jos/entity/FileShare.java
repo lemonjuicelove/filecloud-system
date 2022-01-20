@@ -26,6 +26,7 @@ public class FileShare implements Serializable {
 
     private static final long serialVersionUID=1L;
 
+    @ApiModelProperty(value = "主键id")
     @TableField(fill = FieldFill.INSERT)
     private Long id;
 

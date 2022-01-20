@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.jfcloud.jos.entity.Fileinfo;
 import com.github.jfcloud.jos.entity.RecoveryFile;
+import com.github.jfcloud.jos.exception.BizException;
 import com.github.jfcloud.jos.mapper.RecoveryFileMapper;
 import com.github.jfcloud.jos.service.FileinfoService;
 import com.github.jfcloud.jos.service.RecoveryFileService;
@@ -73,12 +74,11 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
     // 恢复文件
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean recoveryFile(Long id) {
+    public void recoveryFile(Long id) {
 
         RecoveryFile recoveryFile = this.getById(id);
-        if (recoveryFile == null){
-            return true;
-        }
+        if (recoveryFile == null) throw new BizException("文件不存在");
+
         // 删除recoveryFile表中的记录
         this.removeById(id);
 
@@ -90,16 +90,15 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
         }
 
         fileinfoService.recoveryFile(ids);
-
-        return true;
     }
 
     // 彻底删除文件
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean deleteFile(Long id) {
+    public void deleteFile(Long id) {
+
         RecoveryFile recoveryFile = this.getById(id);
-        if (recoveryFile == null) return false;
+        if (recoveryFile == null) throw new BizException("文件不存在");
 
         // 删除recoveryFile表中的记录
         this.removeById(id);
@@ -112,26 +111,22 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
         }
 
         fileinfoService.deleteFiles(ids);
-
-        return true;
     }
 
     // 批量删除
     @Override
-    public boolean deleteFilesBatch(List<Long> ids) {
+    public void deleteFilesBatch(List<Long> ids) {
         for (Long id : ids) {
             deleteFile(id);
         }
-        return true;
     }
 
     // 批量恢复
     @Override
-    public boolean recoveryFilesBatch(List<Long> ids) {
+    public void recoveryFilesBatch(List<Long> ids) {
         for (Long id : ids) {
             recoveryFile(id);
         }
-        return true;
     }
 
 }

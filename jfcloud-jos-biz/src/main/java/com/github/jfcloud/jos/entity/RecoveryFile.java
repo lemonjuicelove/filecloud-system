@@ -40,5 +40,7 @@ public class RecoveryFile implements Serializable {
     @ApiModelProperty(value = "删除时间")
     private Date deletedDate;
 
+    @ApiModelProperty("切片参数文件")
+    private MultipartFileParam param;
 
 }

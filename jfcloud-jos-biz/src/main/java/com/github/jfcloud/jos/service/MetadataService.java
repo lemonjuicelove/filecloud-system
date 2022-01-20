@@ -19,6 +19,5 @@ public interface MetadataService extends IService<Metadata> {
 
     Metadata findMetadataByMd5(String md5);
 
-    void updateStatues(List<Long> ids, Long modifiedBy, Date modifiedDate);
 
 }

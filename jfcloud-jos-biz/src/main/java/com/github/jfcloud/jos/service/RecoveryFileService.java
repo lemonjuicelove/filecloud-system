@@ -18,11 +18,11 @@ public interface RecoveryFileService extends IService<RecoveryFile> {
 
     List<RecoveryFileVo> recoveryFileList();
 
-    boolean recoveryFile(Long id);
+    void recoveryFile(Long id);
 
-    boolean deleteFile(Long id);
+    void deleteFile(Long id);
 
-    boolean deleteFilesBatch(List<Long> ids);
+    void deleteFilesBatch(List<Long> ids);
 
-    boolean recoveryFilesBatch(List<Long> ids);
+    void recoveryFilesBatch(List<Long> ids);
 }

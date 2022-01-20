@@ -30,10 +30,5 @@ public class MetadataServiceImpl extends ServiceImpl<MetadataMapper, Metadata> i
         return metadata;
     }
 
-    // 修改元数据表中的状态
-    @Override
-    public void updateStatues(List<Long> ids, Long modifiedBy, Date modifiedDate) {
-        baseMapper.updateStatues(ids,modifiedBy,modifiedDate);
-    }
 
 }

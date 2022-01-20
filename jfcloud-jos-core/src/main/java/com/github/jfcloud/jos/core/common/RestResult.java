@@ -7,6 +7,7 @@ import com.github.jfcloud.jos.core.constant.ResultCodeEnum;
  * @date 2021/12/31
  */
 public class RestResult<T> {
+
     private Boolean success = true;
     private Integer code = 0;
     private String message;

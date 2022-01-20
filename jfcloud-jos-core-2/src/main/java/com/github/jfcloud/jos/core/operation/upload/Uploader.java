@@ -15,6 +15,4 @@ public interface Uploader {
     // 合并切片
     // public abstract File mergeFile(String filename, String metadata);
 
-
-
 }

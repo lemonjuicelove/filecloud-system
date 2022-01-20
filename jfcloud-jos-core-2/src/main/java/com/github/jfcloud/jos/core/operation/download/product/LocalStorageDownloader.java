@@ -83,9 +83,23 @@ public class LocalStorageDownloader implements Downloader {
         }
     }
 
-    // 批量文件下载
     @Override
-    public void downloadBatch(List<DownloadFile> downloadFiles, HttpServletRequest request, HttpServletResponse response) {
+    public InputStream InputStream(DownloadFile downloadFile) {
+        File f = new File(downloadFile.getPath());
+        InputStream input = null;
+        try {
+            input = new FileInputStream(f);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return input;
+    }
+
+
+
+    // 批量文件下载
+    // @Override
+    /*public void downloadBatch(List<DownloadFile> downloadFiles, HttpServletRequest request, HttpServletResponse response) {
 
         response.reset();
         // 设置响应的编码方式
@@ -170,6 +184,6 @@ public class LocalStorageDownloader implements Downloader {
                 e.printStackTrace();
             }
         }
-    }
+    }*/
 
 }

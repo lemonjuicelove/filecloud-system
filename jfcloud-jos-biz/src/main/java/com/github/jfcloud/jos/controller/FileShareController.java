@@ -1,11 +1,15 @@
 package com.github.jfcloud.jos.controller;
 
 
+import com.github.jfcloud.jos.core.common.StorageTypeEnum;
+import com.github.jfcloud.jos.core.factory.FileOperatorFactory;
+import com.github.jfcloud.jos.core.operation.download.Downloader;
+import com.github.jfcloud.jos.core.operation.download.entity.DownloadFile;
 import com.github.jfcloud.jos.entity.Metadata;
+import com.github.jfcloud.jos.exception.BizException;
 import com.github.jfcloud.jos.service.FileShareService;
 import com.github.jfcloud.jos.service.MetadataService;
 import com.github.jfcloud.jos.util.CommonResult;
-import com.github.jfcloud.jos.util.UploadUtil;
 import com.github.jfcloud.jos.vo.SaveShareFileVo;
 import com.github.jfcloud.jos.vo.ShareFileVo;
 import com.github.jfcloud.jos.vo.ShowShareFileVo;
@@ -15,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
@@ -37,6 +42,9 @@ public class FileShareController {
     @Autowired
     private MetadataService metadataService;
 
+    @Autowired
+    private FileOperatorFactory fileOperatorFactory;
+
 
     @ApiOperation("文件分享")
     @PostMapping("/shareFile")
@@ -46,15 +54,14 @@ public class FileShareController {
      */
     public CommonResult shareFile(@RequestBody ShareFileVo shareFileVo){
 
-
         Map<String, Object> shareInfo = fileShareService.shareFile(shareFileVo);
 
         return CommonResult.ok().data(shareInfo);
     }
 
+
     @ApiOperation("通过链接和提取码获取分享文件")
     @GetMapping("/showShareFile/{linkAddress}/{extractCode}")
-    @Transactional(rollbackFor = Exception.class)
     /*
         linkAddress：链接
         extractCode：提取码
@@ -68,12 +75,12 @@ public class FileShareController {
         // share文件中的view+1
         fileShareService.updateView(showShareFileVo.getShareId());
 
-        return CommonResult.ok().data("分享文件",showShareFileVo);
+        return CommonResult.ok().data("分享文件信息",showShareFileVo);
     }
+
 
     @ApiOperation("保存分享文件")
     @PostMapping("/saveShareFile")
-    @Transactional(rollbackFor = Exception.class)
     /*
         parentId：保存的位置
         metadataId：元数据id
@@ -90,26 +97,33 @@ public class FileShareController {
         return CommonResult.ok();
     }
 
+
     @ApiOperation("下载分享文件")
-    @GetMapping("/downloadShareFile/{metadataId}/{filename}/{shareFileId}")
+    @PostMapping("/downloadShareFile")
     /*
         parentId：保存的位置
         metadataId：元数据id
      */
-    public void downloadShareFile(@PathVariable("metadataId") Long metadataId,
-                                          @PathVariable("filename") String filename,
-                                          @PathVariable("shareFileId") Long shareFileId,
-                                          HttpServletResponse response){
+    public void downloadShareFile(@RequestBody SaveShareFileVo saveShareFileVo,
+                                  HttpServletRequest request,
+                                  HttpServletResponse response){
 
-        Metadata metadata = metadataService.getById(metadataId);
-        if (metadata == null) return;
+        if (saveShareFileVo == null) throw new BizException("下载分享文件失败");
+        Metadata metadata = metadataService.getById(saveShareFileVo.getMetadataId());
+        if (metadata == null) throw new BizException("下载分享文件失败");
+
+        DownloadFile downloadFile = new DownloadFile();
+        downloadFile.setFilename(saveShareFileVo.getFilename());
+        downloadFile.setMetadata(String.valueOf(metadata.getId()));
 
         // 下载文件
-        UploadUtil.downloadFile(filename,metadata.getFileStoreKey(),response);
+        Downloader downloader = fileOperatorFactory.getDownloader(metadata.getJosStorageId());
+        downloader.download(downloadFile,request,response);
 
         // 下载成功，share表中的save+1
-        fileShareService.updateDownload(shareFileId);
+        fileShareService.updateDownload(saveShareFileVo.getShareFileId());
     }
+
 
 }
 

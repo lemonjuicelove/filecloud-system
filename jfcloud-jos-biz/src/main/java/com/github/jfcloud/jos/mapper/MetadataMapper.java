@@ -19,6 +19,6 @@ import java.util.List;
 @Mapper
 public interface MetadataMapper extends BaseMapper<Metadata> {
 
-        void updateStatues(@Param("list") List<Long> ids, @Param("modifiedBy") Long modifiedBy, @Param("modifiedDate") Date modifiedDate);
+
 
 }

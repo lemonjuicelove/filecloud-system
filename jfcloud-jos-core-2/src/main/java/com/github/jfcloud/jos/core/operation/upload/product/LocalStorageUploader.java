@@ -27,7 +27,6 @@ public class LocalStorageUploader implements Uploader {
         this.localConfig = localConfig;
     }
 
-
     // 上传切片文件
     @Override
     public UploadFileResults upload(UploadFile uploadFile) {
@@ -81,7 +80,7 @@ public class LocalStorageUploader implements Uploader {
 
         if (uploadFile.getChunkNumber() == uploadFile.getTotalChunks()){ // 说明是最后一片切片，合并切片
             File mergeFile = mergeFile(uploadFile.getFileName(), uploadFile.getWholeIdentifier());
-            results.setFileSize(mergeFile.length());
+            results.setFileSize((double) mergeFile.length());
             results.setFileUrl(mergeFile.getAbsolutePath());
             results.setStatus(UploadFileStatusEnum.SUCCESS);
         }else{ // 不是最后一片切片

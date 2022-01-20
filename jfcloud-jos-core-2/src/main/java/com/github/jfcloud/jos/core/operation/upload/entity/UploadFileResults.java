@@ -11,7 +11,7 @@ import java.util.List;
 public class UploadFileResults {
 
     private String fileName; // 文件名称
-    private long fileSize; // 文件大小
+    private Double fileSize; // 文件大小
     private String fileUrl; // 文件路径
     private StorageTypeEnum storageType; // 存储类型
     private UploadFileStatusEnum status; // 上传文件状态

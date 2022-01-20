@@ -90,7 +90,17 @@ public class AliyunOSSDownloader implements Downloader {
     }
 
     @Override
-    public void downloadBatch(List<DownloadFile> downloadFiles, HttpServletRequest request, HttpServletResponse response) {
+    public InputStream InputStream(DownloadFile downloadFile) {
+        OSS ossClient = AliyunUtils.getOSSClient(aliyunConfig);
+        OSSObject ossObject = ossClient.getObject(aliyunConfig.getOss().getBucketName(), downloadFile.getMetadata());
+
+        InputStream stream = ossObject.getObjectContent();
+        ossClient.shutdown();
+        return stream;
+    }
+
+    // @Override
+    /*public void downloadBatch(List<DownloadFile> downloadFiles, HttpServletRequest request, HttpServletResponse response) {
 
         response.reset();
         // 设置响应的编码方式
@@ -174,6 +184,6 @@ public class AliyunOSSDownloader implements Downloader {
             }
         }
 
-    }
+    }*/
 
 }

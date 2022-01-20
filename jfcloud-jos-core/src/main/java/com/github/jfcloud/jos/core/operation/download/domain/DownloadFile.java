@@ -9,4 +9,5 @@ public class DownloadFile {
     private String fileUrl;
     private long fileSize;
     private OSS ossClient;
+
 }

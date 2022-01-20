@@ -2,27 +2,24 @@ package com.github.jfcloud.jos.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.github.jfcloud.jos.core.common.StorageTypeEnum;
+import com.github.jfcloud.jos.core.factory.FileOperatorFactory;
+import com.github.jfcloud.jos.core.operation.download.entity.DownloadFile;
+import com.github.jfcloud.jos.core.util.FileUtil;
 import com.github.jfcloud.jos.entity.Fileinfo;
 import com.github.jfcloud.jos.entity.Metadata;
 import com.github.jfcloud.jos.exception.BizException;
 import com.github.jfcloud.jos.mapper.FileinfoMapper;
 import com.github.jfcloud.jos.service.FileinfoService;
 import com.github.jfcloud.jos.service.MetadataService;
-import com.github.jfcloud.jos.service.RecoveryFileService;
-import com.github.jfcloud.jos.util.DateUtil;
-import com.github.jfcloud.jos.util.DownloadConstant;
-import com.github.jfcloud.jos.util.FileSafeCode;
-import com.github.jfcloud.jos.util.UploadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.*;
-import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * <p>
@@ -39,7 +36,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     private MetadataService metadataService;
 
     @Autowired
-    private RecoveryFileService recoveryFileService;
+    private FileOperatorFactory fileOperatorFactory;
 
     // 根据parentId查询当前目录下的文件
     @Override
@@ -86,13 +83,13 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
         if (fileinfo == null) return false;
 
-        // 先查询是否存在同名的目录
-        String fileName = getRepeatFileName(parentId, fileinfo.getName());
-        fileinfo.setName(fileName);
-
         // 根据parentId查询父目录，获取父目录的路径
         Fileinfo parentFile = this.getById(parentId);
         if (parentFile == null) return false;
+
+        // 先查询是否存在同名的目录
+        String fileName = getRepeatFileName(parentId, fileinfo.getName());
+        fileinfo.setName(fileName);
 
         fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
         fileinfo.setParentId(parentId);
@@ -105,134 +102,45 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
     // 递归的删除文件或目录
     @Override
-    // @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public boolean removeFile(Fileinfo fileinfo){
+
+        if (fileinfo == null) return false;
 
         List<Fileinfo> childList = baseMapper.getChildList(fileinfo.getId());
 
         List<Long> fileIds = new ArrayList<>();
-        // List<Long> metadataIds = new ArrayList<>();
+        List<Long> metadataIds = new ArrayList<>();
         for (Fileinfo fileinfo1 : childList) {
             fileIds.add(fileinfo1.getId());
-            /*if ("0".equals(fileinfo1.getIsFile())){ // 要删除的是文件：元数据表中的记录也需要修改
+            if ("0".equals(fileinfo1.getIsFile())){ // 要删除的是文件：元数据表中的记录也需要修改
                 metadataIds.add(fileinfo1.getJosMetadataId());
-            }*/
+            }
         }
 
         // 逻辑删除fileinfo表中的数据
         baseMapper.removeFile(fileIds,19980218L,new Date());
 
-        // 修改元数据表中的状态记录
-        // metadataService.updateStatues(metadataIds,19980218L,new Date());
+        // 逻辑删除元数据表中的数据
+        metadataService.removeByIds(metadataIds);
 
         return true;
     }
 
-    // 上传文件
-    /*@Override
-    @Transactional(rollbackFor = Exception.class)
-    public boolean addFile(MultipartFile file, Long parentId, HttpServletRequest request, HttpServletResponse response) {
-
-        Date date = new Date();
-
-        String filename = file.getOriginalFilename();
-
-        // 文件表添加记录
-        Fileinfo fileinfo = new Fileinfo();
-        Fileinfo parentFile = this.getById(parentId);
-        if(null == parentFile){
-            return false;
-        }
-
-        if (parentFile.getId() != 1){
-            fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
-        }
-
-        fileinfo.setParentId(parentId);
-
-        // 先查询是否存在同名的文件
-        String fileName = getRepeatFileName(parentId, filename);
-        fileinfo.setName(fileName);
-
-        fileinfo.setIsFile("0");
-        fileinfo.setFileSize((double) file.getSize());
-
-        Metadata metadata = new Metadata();
-        if (fileinfo.getFileSize() == 0){ // 说明是空文件：不去元数据表中查，直接创建一个
-
-            File newFile = null;
-            try {
-                newFile = MultipartFileToFile.uploadFileProcess(file,fileinfo.getName());
-            } catch (Exception e) {
-                return false;
-            }
-
-            // 元数据表添加记录
-            metadata.setMd5(FileSafeCode.getMD5(file));
-            metadata.setSha1(FileSafeCode.getSha1(newFile));
-            metadata.setCrc32(FileSafeCode.getCRC32(newFile));
-            metadata.setLocalCtime(date);
-            metadata.setPath(fileinfo.getPath());
-            metadata.setFileSize(new Double(file.getSize()));
-            metadata.setStatus("1");
-            metadata.setMimeType(file.getContentType());
-            String name = fileinfo.getName();
-            name = name.substring(name.lastIndexOf(".")+1);
-            metadata.setMimeName(name);
-            metadata.setFileStoreKey(newFile.getAbsolutePath());
-
-            metadataService.save(metadata);
-        }else{
-            // 根据md5码去元数据表中去查有没有重复的文件
-            String md5 = FileSafeCode.getMD5(file);
-            metadata = metadataService.findMetadataByMd5(md5);
-            if (metadata == null){ // 没有重复的文件，再上传
-
-                File newFile = null;
-                try {
-                    newFile = MultipartFileToFile.uploadFileProcess(file,fileinfo.getName());
-                } catch (Exception e) {
-                    return false;
-                }
-
-                // 元数据表添加记录
-                metadata = new Metadata();
-                metadata.setMd5(md5);
-                metadata.setSha1(FileSafeCode.getSha1(newFile));
-                metadata.setCrc32(FileSafeCode.getCRC32(newFile));
-                metadata.setLocalCtime(date);
-                metadata.setPath(fileinfo.getPath());
-                metadata.setFileSize(new Double(file.getSize()));
-                metadata.setStatus("1");
-                metadata.setMimeType(file.getContentType());
-                String name = fileinfo.getName();
-                name = name.substring(name.lastIndexOf(".")+1);
-                metadata.setMimeName(name);
-                metadata.setFileStoreKey(newFile.getAbsolutePath());
-
-                metadataService.save(metadata);
-            }
-        }
-        fileinfo.setJosMetadataId(metadata.getId());
-
-        return this.save(fileinfo);
-    }*/
-
-    // 新建一个空文件
+    // 新建一个空文件：直接关联本地存储的空文件
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean createContext(Long parentId, Fileinfo fileinfo) {
 
         if (fileinfo == null) return false;
+        Fileinfo parentFile = this.getById(parentId);
+        if (parentFile == null) return false;
 
         // 先查询是否存在同名的文件
         String fileName = getRepeatFileName(parentId, fileinfo.getName());
         fileinfo.setName(fileName);
 
         // 文件表添加记录
-        Fileinfo parentFile = this.getById(parentId);
-        if (parentFile == null) return false;
-
         fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
         fileinfo.setParentId(parentId);
         fileinfo.setIsFile("0");
@@ -241,19 +149,22 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         Metadata metadata = new Metadata();
         metadata.setLocalCtime(new Date());
         metadata.setPath(fileinfo.getPath());
-        metadata.setMd5(UploadUtil.EMPTYMD5);
-        metadata.setSha1(UploadUtil.EMPTYSHA1);
-        metadata.setCrc32(UploadUtil.EMPTYCRC32);
-        metadata.setStatus("1");
-        metadata.setMimeType(UploadUtil.getMine(fileinfo.getName()));
-        metadata.setMimeName(UploadUtil.getPro(fileinfo.getName()));
-        metadata.setFileStoreKey(UploadUtil.EMPTYFILEPATH);
+        metadata.setMd5(fileOperatorFactory.getLocalConfig().getEmptyMD5());
+        metadata.setMimeType(FileUtil.getMine(fileinfo.getName()));
+        metadata.setMimeName(FileUtil.getPro(fileinfo.getName()));
+        metadata.setJosStorageId(StorageTypeEnum.LOCAL.getCode());
+        metadata.setFileStoreKey(fileOperatorFactory.getLocalConfig().getEmptyFilePath());
 
-        metadataService.save(metadata);
+        boolean save1 = metadataService.save(metadata);
         fileinfo.setJosMetadataId(metadata.getId());
-        this.save(fileinfo);
+        boolean save2 = this.save(fileinfo);
 
-        return true;
+        if (save1 && save2){
+            return true;
+        }else{
+            throw new BizException("新建文件失败");
+        }
+
     }
 
     // 根据id修改文件名
@@ -264,19 +175,20 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         Fileinfo fileinfo = this.getById(id);
 
         if (fileinfo == null) return false;
+
         // 先查询是否存在同名的文件或目录
         Long parentId = fileinfo.getParentId();
         String fileName = getRepeatFileName(parentId, name);
         fileinfo.setName(fileName);
 
-        boolean update = updateById(fileinfo);
+        updateById(fileinfo);
 
         // 要修改所有子目录的文件路径
         if ("1".equals(fileinfo.getIsFile())){
             updateFilePath(fileinfo);
         }
 
-        return update;
+        return true;
     }
 
     // 递归的修改文件路径
@@ -299,6 +211,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
                     metadataService.updateById(metadata);
                 }
             }
+
             // 修改自己
             updateById(fileinfo1);
         }
@@ -306,7 +219,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
     // 根据文件id下载文件
     @Override
-    public Map<String,String> downloadFile(Long id) {
+    public DownloadFile downloadFile(Long id) {
 
         // 获取文件信息
         Fileinfo fileinfo = this.getById(id);
@@ -319,103 +232,34 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         Long metadataId = fileinfo.getJosMetadataId();
         Metadata metadata = metadataService.getById(metadataId);
 
-        Map<String,String> res = new HashMap<>();
-        res.put("name",fileinfo.getName());
-        res.put("path",metadata.getFileStoreKey());
+        if (metadata == null) return null;
 
-        return res;
+        DownloadFile downloadFile = new DownloadFile();
+        downloadFile.setFilename(fileinfo.getName());
+        downloadFile.setPath(metadata.getFileStoreKey());
+        downloadFile.setMetadata(String.valueOf(metadata.getId()));
+        if (metadata.getJosStorageId() == StorageTypeEnum.LOCAL.getCode()){
+            downloadFile.setStorageType(StorageTypeEnum.LOCAL);
+        }else if (metadata.getJosStorageId() == StorageTypeEnum.ALIYUN_OSS.getCode()){
+            downloadFile.setStorageType(StorageTypeEnum.ALIYUN_OSS);
+        }else if (metadata.getJosStorageId() == StorageTypeEnum.FAST_DFS.getCode()){
+            downloadFile.setStorageType(StorageTypeEnum.FAST_DFS);
+        }
+
+        return downloadFile;
     }
 
     // 批量下载文件
     @Override
-    public void downloadFilesBatch(List<Long> ids, HttpServletRequest request, HttpServletResponse response) {
+    public List<DownloadFile> downloadFilesBatch(List<Long> ids) {
 
-        response.reset();
-        // 设置响应的编码方式
-        response.setCharacterEncoding("utf-8");
-        // 设置响应的内容类型
-        response.setContentType(DownloadConstant.CONTENTTYPE);
-
-        // 设置压缩包的名字
-        String dates = DateUtil.formatDate(new Date());
-        String billname = "附件包-" + dates;
-        String downloadName = billname + ".zip";
-
-        // 设置返回客户端浏览器，解决文件名乱码问题
-        String agent = request.getHeader("USER-AGENT");
-        try{
-            // 针对以ie为内核的浏览器
-            if (agent.contains("MSIE") || agent.contains("Trident")){
-                downloadName = java.net.URLEncoder.encode(downloadName,"UTF-8");
-            }else{
-                // 非ie浏览器的处理
-                downloadName = new String(downloadName.getBytes("UTF-8"),"ISO-8859-1");
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        // 设置响应的文件的名字和类型
-        response.setHeader(DownloadConstant.HEADNAME,DownloadConstant.HEADVALUE + downloadName);
-
-        // 设置压缩流：边压缩边下载
-        ZipOutputStream zipos = null;
-        try {
-            zipos = new ZipOutputStream(new BufferedOutputStream(response.getOutputStream()));
-            zipos.setMethod(ZipOutputStream.DEFLATED);
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
-        // 将文件写入压缩流
-        DataOutputStream dos = null;
-
+        List<DownloadFile> downloadFiles = new ArrayList<>();
         for (Long id : ids) {
-            Map<String, String> fileMap = this.downloadFile(id);
-            if (fileMap == null) continue;
-            File file = new File(fileMap.get("path"));
-            if (!file.exists()){
-                throw new BizException("文件不存在");
-            }else{
-                FileInputStream fis = null;
-                try{
-                    zipos.putNextEntry(new ZipEntry(fileMap.get("name")));
-                    dos = new DataOutputStream(zipos);
-                    fis = new FileInputStream(file);
-                    byte[] buffer = new byte[1024*1024];
-                    int readNum = 0;
-                    while ((readNum = fis.read(buffer)) != -1){
-                        dos.write(buffer,0,readNum);
-                    }
-                    dos.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }finally {
-                    if (fis != null){
-                        try {
-                            fis.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
+            DownloadFile downloadFile = downloadFile(id);
+            if (downloadFile != null) downloadFiles.add(downloadFile);
         }
 
-        if (dos != null){
-            try {
-                dos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (zipos != null){
-            try {
-                zipos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
+        return downloadFiles;
     }
 
     /*
@@ -425,6 +269,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
      */
     @Override
     public String getRepeatFileName(Long parentId, String fileName){
+
         QueryWrapper<Fileinfo> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("parent_id",parentId);
         queryWrapper.eq("name",fileName);
@@ -485,18 +330,20 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     // 移动文件
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean moveFile(Long sourceId, Long targetId) {
+    public void moveFile(Long sourceId, Long targetId) {
 
         Fileinfo source = this.getById(sourceId);
         Fileinfo target = this.getById(targetId);
 
-        if (source == null || target == null) return false;
+        if (source == null || target == null) throw new BizException("文件移动失败");
+
+        if (source.equals(target)) throw new BizException("文件移动失败");
 
         // 避免高目录移动到低目录
-        if (target.getPath().startsWith(source.getPath()) && target.getPath().length() > source.getPath().length()) return false;
+        if (target.getPath().startsWith(source.getPath()) && target.getPath().length() > source.getPath().length()) throw new BizException("文件移动失败");
 
         // 避免原地移动
-        if (source.getParentId().equals(target.getId())) return false;
+        if (source.getParentId().equals(target.getId())) throw new BizException("文件移动失败");
 
         // 判断是否有同名的文件
         source.setName(getRepeatFileName(targetId,source.getName()));
@@ -521,7 +368,6 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         // 递归修改子文件的path
         updateFilePath(source);
 
-        return true;
     }
 
 }

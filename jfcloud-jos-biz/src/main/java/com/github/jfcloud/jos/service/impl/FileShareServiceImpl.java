@@ -7,6 +7,7 @@ import com.github.jfcloud.jos.entity.FileShare;
 import com.github.jfcloud.jos.entity.FileShareLink;
 import com.github.jfcloud.jos.entity.Fileinfo;
 import com.github.jfcloud.jos.entity.Metadata;
+import com.github.jfcloud.jos.exception.BizException;
 import com.github.jfcloud.jos.mapper.FileShareMapper;
 import com.github.jfcloud.jos.service.FileShareLinkService;
 import com.github.jfcloud.jos.service.FileShareService;
@@ -50,10 +51,10 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
     @Transactional(rollbackFor = Exception.class)
     public Map<String,Object> shareFile(ShareFileVo shareFileVo) {
 
-        if (shareFileVo == null) return null;
+        if (shareFileVo == null) throw new BizException("分享文件错误");
 
         Fileinfo fileinfo = fileinfoService.getById(shareFileVo.getId());
-        if (fileinfo == null || "1".equals(fileinfo.getIsFile())) return null;
+        if (fileinfo == null || "1".equals(fileinfo.getIsFile())) throw new BizException("分享文件错误");
 
         // share表添加记录
         FileShare fileShare = new FileShare();
@@ -70,13 +71,17 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         fileShare.setIsEffective("1");
         fileShare.setMaxCount(shareFileVo.getMaxCount());
 
-        this.save(fileShare);
+        boolean save = this.save(fileShare);
 
         // share_link表添加记录
         FileShareLink fileShareLink = new FileShareLink();
         fileShareLink.setShareId(fileShare.getId());
         fileShareLink.setFileId(fileinfo.getId());
-        fileShareLinkService.save(fileShareLink);
+        boolean save1 = fileShareLinkService.save(fileShareLink);
+
+        if (!save || !save1){
+            throw new BizException("分享文件错误");
+        }
 
         Map<String,Object> res = new HashMap<>();
         res.put("链接",uuid);
@@ -95,7 +100,7 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         queryWrapper.eq("extract_code",extractCode);
         queryWrapper.eq("is_effective","1");
         FileShare fileShare = this.getOne(queryWrapper);
-        if (fileShare == null) return null;
+        if (fileShare == null) throw new BizException("文件不存在");
 
         // 验证有效期是否过期
         // 验证访问人数是否超过限制
@@ -103,18 +108,18 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
             // 失效
             fileShare.setIsEffective("0");
             this.updateById(fileShare);
-            return null;
+            throw new BizException("文件失效");
         }
 
         // 去share_link表中查数据
         QueryWrapper<FileShareLink> queryWrapper1 = new QueryWrapper<>();
         queryWrapper1.eq("share_id",fileShare.getId());
         FileShareLink fileShareLink = fileShareLinkService.getOne(queryWrapper1);
-        if (fileShareLink == null) return null;
+        if (fileShareLink == null) throw new BizException("文件不存在");
 
         // 去fileinfo表中查数据
         Fileinfo fileinfo = fileinfoService.getById(fileShareLink.getFileId());
-        if (fileinfo == null) return null;
+        if (fileinfo == null) throw new BizException("文件不存在");
 
         ShowShareFileVo showShareFileVo = new ShowShareFileVo();
         showShareFileVo.setName(fileinfo.getName());
@@ -131,13 +136,13 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
     // 保存分享的文件
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean saveShareFile(Long parentId, Long metadataId, String filename) {
+    public void saveShareFile(Long parentId, Long metadataId, String filename) {
 
-        if (filename == null) return false;
+        if (filename == null) throw new BizException("保存文件失败");
         Metadata sourceMetadata = metadataService.getById(metadataId);
-        if (sourceMetadata == null) return false;
+        if (sourceMetadata == null) throw new BizException("保存文件失败");
         Fileinfo parentFile = fileinfoService.getById(parentId);
-        if (parentFile == null) return false;
+        if (parentFile == null) throw new BizException("保存文件失败");
 
         // fileinfo表中创建记录，关联元数据表中新创建的记录
         Fileinfo fileinfo = new Fileinfo();
@@ -153,15 +158,17 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         BeanUtils.copyProperties(sourceMetadata,metadata);
         metadata.setId(null);
         metadata.setPath(fileinfo.getPath());
+        metadata.setLocalCtime(new Date());
         metadata.setLastModifiedBy(null);
         metadata.setLastModifiedDate(null);
-        metadataService.save(metadata);
+
+        boolean save = metadataService.save(metadata);
 
         fileinfo.setJosMetadataId(metadata.getId());
-        fileinfoService.save(fileinfo);
+        boolean save1 = fileinfoService.save(fileinfo);
 
+        if (!save || !save1) throw new BizException("保存文件失败");
 
-        return true;
     }
 
     // 更改share表中的viewCount
@@ -170,7 +177,7 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         FileShare fileShare = this.getById(shareId);
         if (fileShare == null) return;
         fileShare.setViewCount(fileShare.getViewCount()+1);
-        this.updateById(fileShare);
+         this.updateById(fileShare);
     }
 
     // 更改share表中的saveCount

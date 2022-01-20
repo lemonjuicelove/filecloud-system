@@ -1,5 +1,6 @@
 package com.github.jfcloud.jos.entity;
 
+import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@ApiModel(value = "切片文件对象")
 public class MultipartFileParam {
 
     @ApiModelProperty("当前切片")
@@ -32,5 +34,7 @@ public class MultipartFileParam {
     @ApiModelProperty("切片文件")
     private MultipartFile file;
 
+    @ApiModelProperty("文件信息对象")
+    private Fileinfo fileinfo;
 
 }

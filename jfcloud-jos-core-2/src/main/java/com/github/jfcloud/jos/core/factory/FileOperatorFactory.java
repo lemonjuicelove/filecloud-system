@@ -13,8 +13,9 @@ import com.github.jfcloud.jos.core.operation.download.product.LocalStorageDownlo
 import com.github.jfcloud.jos.core.operation.upload.Uploader;
 import com.github.jfcloud.jos.core.operation.upload.product.AliyunOSSUploader;
 import com.github.jfcloud.jos.core.operation.upload.product.LocalStorageUploader;
+import lombok.Data;
 
-
+@Data
 public class  FileOperatorFactory {
 
     private String storageType;

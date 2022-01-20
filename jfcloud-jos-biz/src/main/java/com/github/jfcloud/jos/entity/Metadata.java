@@ -34,21 +34,11 @@ public class Metadata implements Serializable {
     @ApiModelProperty(value = "md5校验码")
     private String md5;
 
-    @ApiModelProperty(value = "sha1校验码")
-    private String sha1;
-
-    @ApiModelProperty(value = "crc32校验码")
-    private String crc32;
-
     @ApiModelProperty(value = "存储路径")
     private String path;
 
-    @ApiModelProperty(value = "文件大小")
+    @ApiModelProperty(value = "文件大小")
     private Double fileSize;
-
-    @ApiModelProperty(value = "状态 (0/1  删除/正常  )")
-    @TableField(fill = FieldFill.INSERT)
-    private String status;
 
     @ApiModelProperty(value = "媒体类型")
     private String mimeType;
@@ -56,14 +46,11 @@ public class Metadata implements Serializable {
     @ApiModelProperty(value = "后缀名")
     private String mimeName;
 
-    @ApiModelProperty(value = "版本")
-    private Integer version;
-
     @ApiModelProperty(value = "上传时间")
     private Date localCtime;
 
     @ApiModelProperty(value = "存储方式Id")
-    private Long josStorageId;
+    private Integer josStorageId;
 
     @ApiModelProperty(value = "存储文件地址唯一标识")
     private String fileStoreKey;
