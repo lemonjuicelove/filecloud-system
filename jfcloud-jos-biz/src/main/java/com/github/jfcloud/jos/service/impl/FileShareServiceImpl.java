@@ -65,8 +65,8 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         String extractCode = RandomUtil.randomNumbers(6);
         fileShare.setLinkAddress(uuid);
         fileShare.setExtractCode(extractCode);
-        fileShare.setSharer("lemonjuice");
-        fileShare.setSharerId(19980218L);
+        fileShare.setSharer(shareFileVo.getName());
+        fileShare.setSharerId(shareFileVo.getUserId());
         fileShare.setShareTime(new Date());
         fileShare.setIsEffective("1");
         fileShare.setMaxCount(shareFileVo.getMaxCount());
@@ -77,6 +77,7 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         FileShareLink fileShareLink = new FileShareLink();
         fileShareLink.setShareId(fileShare.getId());
         fileShareLink.setFileId(fileinfo.getId());
+        fileShareLink.setCreatedBy(shareFileVo.getUserId());
         boolean save1 = fileShareLinkService.save(fileShareLink);
 
         if (!save || !save1){
@@ -128,15 +129,16 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         showShareFileVo.setFileSize(fileinfo.getFileSize());
         showShareFileVo.setShareTime(fileShare.getShareTime());
         showShareFileVo.setEndTime(fileShare.getEffectiveDate());
-        showShareFileVo.setUserName("lemonjuice");
+        showShareFileVo.setUserName(fileShare.getSharer());
 
         return showShareFileVo;
     }
 
     // 保存分享的文件
+    // 存在一些问题：如果是通用的系统，那么就不需要做文件分享了，因为目录都是相同的
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void saveShareFile(Long parentId, Long metadataId, String filename) {
+    public void saveShareFile(Long parentId, Long metadataId, String filename,Long userId) {
 
         if (filename == null) throw new BizException("保存文件失败");
         Metadata sourceMetadata = metadataService.getById(metadataId);
@@ -150,7 +152,7 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         fileinfo.setParentId(parentId);
         fileinfo.setIsFile("0");
         fileinfo.setFileSize(sourceMetadata.getFileSize());
-        fileinfo.setFileAuther(19971218L);
+        fileinfo.setFileAuther(userId);
         fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
 
         // 元数据表中创建记录，id不同，其他的应该都相同
@@ -159,8 +161,6 @@ public class FileShareServiceImpl extends ServiceImpl<FileShareMapper, FileShare
         metadata.setId(null);
         metadata.setPath(fileinfo.getPath());
         metadata.setLocalCtime(new Date());
-        metadata.setLastModifiedBy(null);
-        metadata.setLastModifiedDate(null);
 
         boolean save = metadataService.save(metadata);
 

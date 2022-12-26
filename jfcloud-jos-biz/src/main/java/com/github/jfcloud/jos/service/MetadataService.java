@@ -19,5 +19,9 @@ public interface MetadataService extends IService<Metadata> {
 
     Metadata findMetadataByMd5(String md5);
 
+    void removeMetadataByIds(List<Long> ids,Long userId);
 
+    void recoveryMeta(List<Long> metaIds);
+
+    void deleteMeta(List<Long> ids);
 }

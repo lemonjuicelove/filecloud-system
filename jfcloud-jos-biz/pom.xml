@@ -27,7 +27,7 @@
         </dependency>
 
 
-        <!--        mybatis-->
+        <!-- mybatis-->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
@@ -120,7 +120,7 @@
         </dependency>
 
         <!-- MultipartFile转File -->
-        <dependency>
+        <!--<dependency>
             <groupId>commons-fileupload</groupId>
             <artifactId>commons-fileupload</artifactId>
             <version>1.2.2</version>
@@ -129,7 +129,7 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>1.3.2</version>
-        </dependency>
+        </dependency>-->
 
         <!--SpringBoot集成Redis的起步依赖-->
         <dependency>
@@ -143,7 +143,13 @@
             <artifactId>jedis</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+
     </dependencies>
+
 
     <build>
         <plugins>

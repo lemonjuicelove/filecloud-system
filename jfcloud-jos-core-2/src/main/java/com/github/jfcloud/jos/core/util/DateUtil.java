@@ -39,9 +39,4 @@ public class DateUtil {
         return now.getTime();
     }
 
-    public static void main(String[] args) {
-        System.out.println(DateUtil.formatDate(new Date()));
-        System.out.println(DateUtil.formatDate(DateUtil.addDays(new Date(), -1)));
-    }
-
 }

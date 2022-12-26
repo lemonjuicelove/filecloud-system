@@ -83,7 +83,7 @@ public class Fileinfo implements Serializable {
     @ApiModelProperty(value = "文件路径")
     private String path;
 
-    @ApiModelProperty(value = "恢复文件")
-    private RecoveryFile recoveryFile;
+    /*@ApiModelProperty(value = "恢复文件")
+    private RecoveryFile recoveryFile;*/
     
 }

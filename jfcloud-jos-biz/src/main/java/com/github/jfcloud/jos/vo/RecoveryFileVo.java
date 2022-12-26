@@ -28,6 +28,7 @@ public class RecoveryFileVo {
     @ApiModelProperty(value = "创建时间")
     private Date createdDate;
 
+
     @ApiModelProperty(value = "删除时间")
     private Date deletedDate;
 

@@ -21,7 +21,7 @@ public interface FileShareService extends IService<FileShare> {
 
     ShowShareFileVo showShareFile(String linkAddress, String extractCode);
 
-    void saveShareFile(Long parentId, Long metadataId, String filename);
+    void saveShareFile(Long parentId, Long metadataId, String filename,Long userId);
 
     void updateView(Long shareId);
 

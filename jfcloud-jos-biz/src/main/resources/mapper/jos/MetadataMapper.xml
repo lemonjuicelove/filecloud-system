@@ -10,4 +10,27 @@
         </foreach>
     </update>-->
 
+    <update id="removeMetadata">
+        update jos_metadata set deleted_flag = '0',deleted_by = #{deletedBy},deleted_date = #{date}
+        where deleted_flag = '1' and id in
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="recoveryMeta">
+        update jos_metadata set deleted_flag = '1',deleted_by = null,deleted_date = null
+        where deleted_flag = '0' and id in
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+    <delete id="deleteMeta">
+        delete from jos_metadata where id in
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </delete>
+
 </mapper>

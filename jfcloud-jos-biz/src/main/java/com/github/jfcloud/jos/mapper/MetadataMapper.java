@@ -19,6 +19,9 @@ import java.util.List;
 @Mapper
 public interface MetadataMapper extends BaseMapper<Metadata> {
 
+    void removeMetadata(@Param("list") List<Long> ids, @Param("deletedBy") Long deletedBy, @Param("date") Date date);
 
+    void recoveryMeta(@Param("list") List<Long> ids);
 
+    void deleteMeta(@Param("list") List<Long> ids);
 }

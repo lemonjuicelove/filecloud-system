@@ -15,6 +15,7 @@ import com.github.jfcloud.jos.service.MetadataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -79,13 +80,15 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
     // 新建一个目录
     @Override
-    public boolean createDir(Long parentId, Fileinfo fileinfo) {
+    public boolean createDir(Long parentId, Long userId, String filename) {
 
-        if (fileinfo == null) return false;
+        if (StringUtils.isEmpty(filename)) return false;
 
         // 根据parentId查询父目录，获取父目录的路径
         Fileinfo parentFile = this.getById(parentId);
         if (parentFile == null) return false;
+
+        Fileinfo fileinfo = new Fileinfo();
 
         // 先查询是否存在同名的目录
         String fileName = getRepeatFileName(parentId, fileinfo.getName());
@@ -94,16 +97,17 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
         fileinfo.setParentId(parentId);
         fileinfo.setIsFile("1");
+        fileinfo.setFileAuther(userId);
+        fileinfo.setCreatedBy(userId);
 
         // 保存
-        boolean save = this.save(fileinfo);
-        return save;
+        return this.save(fileinfo);
     }
 
     // 递归的删除文件或目录
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean removeFile(Fileinfo fileinfo){
+    public boolean removeFile(Fileinfo fileinfo,Long userId){
 
         if (fileinfo == null) return false;
 
@@ -113,16 +117,16 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         List<Long> metadataIds = new ArrayList<>();
         for (Fileinfo fileinfo1 : childList) {
             fileIds.add(fileinfo1.getId());
-            if ("0".equals(fileinfo1.getIsFile())){ // 要删除的是文件：元数据表中的记录也需要修改
+            if ("0".equals(fileinfo1.getIsFile())){ // 要删除的是文件：元数据表中的记录也需要删除
                 metadataIds.add(fileinfo1.getJosMetadataId());
             }
         }
 
         // 逻辑删除fileinfo表中的数据
-        baseMapper.removeFile(fileIds,19980218L,new Date());
+        baseMapper.removeFile(fileIds,userId,new Date());
 
         // 逻辑删除元数据表中的数据
-        metadataService.removeByIds(metadataIds);
+        metadataService.removeMetadataByIds(metadataIds,userId);
 
         return true;
     }
@@ -130,11 +134,13 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     // 新建一个空文件：直接关联本地存储的空文件
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean createContext(Long parentId, Fileinfo fileinfo) {
+    public boolean createContext(Long parentId, Long userId, String filename) {
 
-        if (fileinfo == null) return false;
+        if (StringUtils.isEmpty(filename)) return false;
         Fileinfo parentFile = this.getById(parentId);
         if (parentFile == null) return false;
+
+        Fileinfo fileinfo = new Fileinfo();
 
         // 先查询是否存在同名的文件
         String fileName = getRepeatFileName(parentId, fileinfo.getName());
@@ -144,6 +150,8 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         fileinfo.setPath(parentFile.getPath() + "/" + parentFile.getName());
         fileinfo.setParentId(parentId);
         fileinfo.setIsFile("0");
+        fileinfo.setFileAuther(userId);
+        fileinfo.setCreatedBy(userId);
 
         // 元数据表添加记录
         Metadata metadata = new Metadata();
@@ -154,6 +162,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         metadata.setMimeName(FileUtil.getPro(fileinfo.getName()));
         metadata.setJosStorageId(StorageTypeEnum.LOCAL.getCode());
         metadata.setFileStoreKey(fileOperatorFactory.getLocalConfig().getEmptyFilePath());
+        metadata.setCreatedBy(userId);
 
         boolean save1 = metadataService.save(metadata);
         fileinfo.setJosMetadataId(metadata.getId());
@@ -170,7 +179,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     // 根据id修改文件名
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateFile(Long id, String name) {
+    public boolean updateFile(Long id, String name,Long userId) {
 
         Fileinfo fileinfo = this.getById(id);
 
@@ -180,6 +189,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         Long parentId = fileinfo.getParentId();
         String fileName = getRepeatFileName(parentId, name);
         fileinfo.setName(fileName);
+        fileinfo.setLastModifiedBy(userId);
 
         updateById(fileinfo);
 
@@ -202,12 +212,14 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
 
         for (Fileinfo fileinfo1 : fileinfos) {
             fileinfo1.setPath(fileinfo.getPath()+"/"+fileinfo.getName());
+            fileinfo1.setLastModifiedBy(fileinfo.getLastModifiedBy());
             if ("1".equals(fileinfo1.getIsFile())){ // 是目录：递归的修改子集
                 updateFilePath(fileinfo1);
             }else{ // 是文件：修改元数据表中的path
                 Metadata metadata = metadataService.getById(fileinfo1.getJosMetadataId());
                 if (metadata != null){
                     metadata.setPath(fileinfo1.getPath());
+                    metadata.setLastModifiedBy(fileinfo.getLastModifiedBy());
                     metadataService.updateById(metadata);
                 }
             }
@@ -318,6 +330,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     // 根据ids恢复文件
     @Override
     public void recoveryFile(List<Long> ids) {
+        // 恢复fileinfo表中的记录
         baseMapper.recoveryFile(ids);
     }
 
@@ -330,7 +343,7 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
     // 移动文件
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void moveFile(Long sourceId, Long targetId) {
+    public void moveFile(Long sourceId, Long targetId,Long userId) {
 
         Fileinfo source = this.getById(sourceId);
         Fileinfo target = this.getById(targetId);
@@ -354,6 +367,8 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
         // 更改path
         source.setPath(target.getPath()+"/"+target.getName());
 
+        source.setLastModifiedBy(userId);
+
         this.updateById(source);
 
         // 更改元数据表
@@ -361,13 +376,13 @@ public class FileinfoServiceImpl extends ServiceImpl<FileinfoMapper, Fileinfo> i
             Metadata metadata = metadataService.getById(source.getJosMetadataId());
             if (metadata != null){
                 metadata.setPath(source.getPath());
+                metadata.setLastModifiedBy(userId);
                 metadataService.updateById(metadata);
             }
         }
 
         // 递归修改子文件的path
         updateFilePath(source);
-
     }
 
 }

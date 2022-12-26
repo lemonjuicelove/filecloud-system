@@ -15,19 +15,15 @@ public class TableFieldHandler implements MetaObjectHandler {
 
     @Override
     public void insertFill(MetaObject metaObject) {
-
-        this.setFieldValByName("createdBy", 19980218L,metaObject);
         this.setFieldValByName("createdDate",new Date(),metaObject);
         this.setFieldValByName("deletedFlag","1",metaObject);
         this.setFieldValByName("permissions",777,metaObject);
         this.setFieldValByName("id", IdUtil.getSnowflakeNextId(),metaObject);
-
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
         this.setFieldValByName("lastModifiedDate",new Date(),metaObject);
-        this.setFieldValByName("lastModifiedBy",19980218L,metaObject);
     }
 
 }

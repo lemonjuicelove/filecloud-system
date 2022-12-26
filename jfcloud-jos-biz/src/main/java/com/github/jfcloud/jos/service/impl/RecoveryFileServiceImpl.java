@@ -30,6 +30,9 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
     @Autowired
     private FileinfoService fileinfoService;
 
+    @Autowired
+    private MetadataServiceImpl metadataService;
+
     // 获取回收站的文件列表
     @Override
     public List<RecoveryFileVo> recoveryFileList() {
@@ -85,11 +88,15 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
         // 将fileinfo表中被删除的文件信息恢复
         List<Fileinfo> deletedChildList = fileinfoService.getDeletedChildList(recoveryFile.getFileinfoId());
         List<Long> ids = new ArrayList<>();
+        List<Long> metaIds = new ArrayList<>();
         for (Fileinfo fileinfo : deletedChildList) {
             ids.add(fileinfo.getId());
+            if("0".equals(fileinfo.getIsFile())) metaIds.add(fileinfo.getJosMetadataId());
         }
 
         fileinfoService.recoveryFile(ids);
+
+        metadataService.recoveryMeta(metaIds);
     }
 
     // 彻底删除文件
@@ -106,11 +113,15 @@ public class RecoveryFileServiceImpl extends ServiceImpl<RecoveryFileMapper, Rec
         // 彻底删除fileinfo表中的记录
         List<Fileinfo> deletedChildList = fileinfoService.getDeletedChildList(recoveryFile.getFileinfoId());
         List<Long> ids = new ArrayList<>();
+        List<Long> metaIds = new ArrayList<>();
         for (Fileinfo fileinfo : deletedChildList) {
             ids.add(fileinfo.getId());
+            if("0".equals(fileinfo.getIsFile())) metaIds.add(fileinfo.getJosMetadataId());
         }
 
         fileinfoService.deleteFiles(ids);
+
+        metadataService.deleteMeta(metaIds);
     }
 
     // 批量删除

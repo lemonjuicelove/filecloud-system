@@ -80,16 +80,17 @@ public class FileShareController {
 
 
     @ApiOperation("保存分享文件")
-    @PostMapping("/saveShareFile")
+    @PostMapping("/saveShareFile/{userId}")
     /*
         parentId：保存的位置
         metadataId：元数据id
      */
-    public CommonResult saveShareFile(@RequestBody SaveShareFileVo saveShareFileVo){
+    public CommonResult saveShareFile(@PathVariable("userId") Long userId,
+                                    @RequestBody SaveShareFileVo saveShareFileVo){
 
         if (saveShareFileVo == null) return CommonResult.error();
 
-        fileShareService.saveShareFile(saveShareFileVo.getParentId(),saveShareFileVo.getMetadataId(),saveShareFileVo.getFilename());
+        fileShareService.saveShareFile(saveShareFileVo.getParentId(),saveShareFileVo.getMetadataId(),saveShareFileVo.getFilename(),userId);
 
         // 保存成功，share表中的save+1
         fileShareService.updateSave(saveShareFileVo.getShareFileId());

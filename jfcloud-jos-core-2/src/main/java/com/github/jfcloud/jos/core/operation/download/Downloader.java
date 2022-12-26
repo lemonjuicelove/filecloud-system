@@ -17,4 +17,5 @@ public interface Downloader {
     // void downloadBatch(List<DownloadFile> downloadFiles, HttpServletRequest request, HttpServletResponse response);
 
     InputStream InputStream(DownloadFile downloadFile);
+
 }

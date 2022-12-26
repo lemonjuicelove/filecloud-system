@@ -18,7 +18,6 @@
         <module>jfcloud-jos-biz</module>
         <module>jfcloud-jos-core</module>
         <module>jfcloud-jos-core-2</module>
-        <module>jfcloud-util</module>
     </modules>
 
     <properties>

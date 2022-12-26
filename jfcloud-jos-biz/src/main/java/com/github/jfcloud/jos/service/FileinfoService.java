@@ -23,13 +23,13 @@ public interface FileinfoService extends IService<Fileinfo> {
 
     List<Fileinfo> findFileByParentId(Long parentId, String orderBy);
 
-    boolean createDir(Long parentId, Fileinfo fileinfo);
+    boolean createDir(Long parentId, Long userId, String filename);
 
-    boolean removeFile(Fileinfo fileinfo);
+    boolean removeFile(Fileinfo fileinfo,Long userId);
 
-    boolean createContext(Long parentId, Fileinfo fileinfo);
+    boolean createContext(Long parentId,Long userId, String filename);
 
-    boolean updateFile(Long id, String name);
+    boolean updateFile(Long id, String name,Long userId);
 
     DownloadFile downloadFile(Long id);
 
@@ -43,7 +43,7 @@ public interface FileinfoService extends IService<Fileinfo> {
 
     void deleteFiles(List<Long> ids);
 
-    void moveFile(Long sourceId, Long targetId);
+    void moveFile(Long sourceId, Long targetId,Long userId);
 
     List<DownloadFile> downloadFilesBatch(List<Long> ids);
 }

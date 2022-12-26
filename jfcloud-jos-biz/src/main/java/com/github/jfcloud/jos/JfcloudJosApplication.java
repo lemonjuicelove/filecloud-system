@@ -14,5 +14,4 @@ public class JfcloudJosApplication {
         SpringApplication.run(com.github.jfcloud.jos.JfcloudJosApplication.class, args);
     }
 
-
 }

@@ -72,9 +72,11 @@ public class FileinfoController {
     private FileOperatorFactory fileOperatorFactory;
 
     @ApiOperation("上传文件")
-    @PostMapping("/uploadFile/{parentId}")
+    @PostMapping("/uploadFile/{parentId}/{userId}")
     @Transactional(rollbackFor = Exception.class)
-    public CommonResult uploadFile(UploadFile uploadFile,@PathVariable("parentId") Long parentId){
+    public CommonResult uploadFile(UploadFile uploadFile,
+                                   @PathVariable("parentId") Long parentId,
+                                   @PathVariable("userId") Long userId){
 
         if (uploadFile == null) return CommonResult.error().message("上传文件失败");
 
@@ -94,6 +96,7 @@ public class FileinfoController {
             fileinfo.setName(fileinfoService.getRepeatFileName(parentId,uploadFile.getFileName()));
             fileinfo.setIsFile("0");
             fileinfo.setFileSize(metadata.getFileSize());
+            fileinfo.setFileAuther(userId);
 
             // 元数据表中添加记录
             Metadata newMetadata = new Metadata();
@@ -105,6 +108,7 @@ public class FileinfoController {
             newMetadata.setLocalCtime(new Date());
             newMetadata.setJosStorageId(metadata.getJosStorageId());
             newMetadata.setFileStoreKey(metadata.getFileStoreKey());
+            newMetadata.setCreatedBy(userId);
 
             metadataService.save(newMetadata);
             fileinfo.setJosMetadataId(newMetadata.getId());
@@ -116,15 +120,14 @@ public class FileinfoController {
             return CommonResult.ok().data("result",result);
         }
 
-
-        // 元数据不存在：去缓存中查询
+        // 元数据不存在：去缓存中查询是第几块分片
         String pre = FileUtil.getPre(uploadFile.getFileName());
         String key = pre + "-" + wholeIdentifier;
         String value = uploadFile.getChunkNumber() + "-" + uploadFile.getIdentifier();
         if (redisUtil.hasKey(key)){
             List<Object> values = redisUtil.getList(key);
             for (Object o : values) {
-                if (o.equals(value)){
+                if (o.equals(value)){ // 该分片存在
                     UploadFileResults result = new UploadFileResults();
                     BeanUtils.copyProperties(uploadFile,result);
                     result.setStatus(UploadFileStatusEnum.UNCOMPLATE);
@@ -133,6 +136,7 @@ public class FileinfoController {
             }
         }
 
+        // 分片不存在 上传分片
         Uploader uploader = fileOperatorFactory.getUploader();
         UploadFileResults uploadResults = uploader.upload(uploadFile);
 
@@ -152,6 +156,7 @@ public class FileinfoController {
         fileinfo.setName(fileinfoService.getRepeatFileName(parentId,uploadFile.getFileName()));
         fileinfo.setIsFile("0");
         fileinfo.setFileSize(uploadResults.getFileSize());
+        fileinfo.setFileAuther(userId);
 
         // 元数据表中添加记录
         Metadata newMetadata = new Metadata();
@@ -163,6 +168,7 @@ public class FileinfoController {
         newMetadata.setLocalCtime(new Date());
         newMetadata.setJosStorageId(uploadResults.getStorageType().getCode());
         newMetadata.setFileStoreKey(uploadResults.getFileUrl());
+        newMetadata.setCreatedBy(userId);
 
         metadataService.save(newMetadata);
         fileinfo.setJosMetadataId(newMetadata.getId());
@@ -197,19 +203,21 @@ public class FileinfoController {
 
 
     @ApiOperation("新建一个空文件")
-    @PostMapping("/createContext/{parentId}")
+    @PostMapping("/createContext/{parentId}/{userId}/{filename}")
     public CommonResult createContext(@PathVariable("parentId") Long parentId,
-                                  @RequestBody Fileinfo fileinfo){
-        boolean save = fileinfoService.createContext(parentId, fileinfo);
+                                      @PathVariable("userId") Long userId,
+                                      @PathVariable("filename") String filename){
+        boolean save = fileinfoService.createContext(parentId,userId,filename);
         return save ? CommonResult.ok() : CommonResult.error().message("新建失败");
     }
 
 
     @ApiOperation("新建一个目录")
-    @PostMapping("/createDir/{parentId}")
+    @PostMapping("/createDir/{parentId}/{userId}/{filename}")
     public CommonResult createDir(@PathVariable("parentId") Long parentId,
-                                  @RequestBody Fileinfo fileinfo){
-        boolean save = fileinfoService.createDir(parentId, fileinfo);
+                                  @PathVariable("userId") Long userId,
+                                  @PathVariable("filename") String filename){
+        boolean save = fileinfoService.createDir(parentId,userId,filename);
         return save ? CommonResult.ok() : CommonResult.error().message("新建失败");
     }
 
@@ -227,19 +235,19 @@ public class FileinfoController {
 
 
     @ApiOperation("根据id删除文件")
-    @DeleteMapping("/deleteFile/{id}")
+    @DeleteMapping("/deleteFile/{id}/{userId}")
     @Transactional(rollbackFor = Exception.class)
-    public CommonResult deleteFile(@PathVariable("id") Long id){
+    public CommonResult deleteFile(@PathVariable("id") Long id,
+                                   @PathVariable("userId") Long userId){
         Fileinfo fileinfo = fileinfoService.getById(id);
         if (null == fileinfo){
             return CommonResult.error().message("文件不存在");
         }else{
-
-            boolean remove = fileinfoService.removeFile(fileinfo);
+            boolean remove = fileinfoService.removeFile(fileinfo,userId);
             // 在回收站表中添加一条记录
             RecoveryFile recoveryFile = new RecoveryFile();
             recoveryFile.setFileinfoId(fileinfo.getId());
-            recoveryFile.setDeletedBy(19980218L);
+            recoveryFile.setDeletedBy(userId);
             recoveryFile.setDeletedDate(new Date());
             boolean save = recoveryFileService.save(recoveryFile);
 
@@ -249,23 +257,22 @@ public class FileinfoController {
                 throw new BizException("删除文件失败");
             }
         }
-
     }
 
-
     @ApiOperation("根据id批量删除文件")
-    @DeleteMapping("/deleteFilesBatch")
+    @DeleteMapping("/deleteFilesBatch/{userId}")
     @Transactional(rollbackFor = Exception.class)
-    public CommonResult deleteFilesBatch(@RequestBody List<Long> ids){
+    public CommonResult deleteFilesBatch(@PathVariable("userId") Long userId,
+                                         @RequestBody List<Long> ids){
 
         for (Long id : ids) {
             Fileinfo fileinfo = fileinfoService.getById(id);
             if (fileinfo != null){
-                boolean remove = fileinfoService.removeFile(fileinfo);
+                boolean remove = fileinfoService.removeFile(fileinfo,userId);
                 // 在回收站表中添加一条记录
                 RecoveryFile recoveryFile = new RecoveryFile();
                 recoveryFile.setFileinfoId(fileinfo.getId());
-                recoveryFile.setDeletedBy(19980218L);
+                recoveryFile.setDeletedBy(userId);
                 recoveryFile.setDeletedDate(new Date());
                 boolean save = recoveryFileService.save(recoveryFile);
 
@@ -278,13 +285,14 @@ public class FileinfoController {
 
 
     @ApiOperation("根据id修改文件名")
-    @PostMapping("/updateFile/{id}/{name}")
+    @PostMapping("/updateFile/{id}/{name}/{userId}")
     public CommonResult updateFile(@PathVariable("id") Long id,
-                                   @PathVariable("name") String name){
+                                   @PathVariable("name") String name,
+                                   @PathVariable("userId") Long userId){
 
-        if (name == null) return CommonResult.error().message("文件名不能为空");
+        if (StringUtils.isEmpty(name)) return CommonResult.error().message("文件名不能为空");
 
-        boolean update = fileinfoService.updateFile(id, name);
+        boolean update = fileinfoService.updateFile(id, name,userId);
 
         return update ? CommonResult.ok() : CommonResult.error().message("修改失败");
     }
@@ -398,30 +406,32 @@ public class FileinfoController {
 
 
     @ApiOperation("文件移动")
-    @PostMapping("/moveFile/{sourceId}/{targetId}")
+    @PostMapping("/moveFile/{sourceId}/{targetId}/{userId}")
     /**
      *  sourceId：需要移动的文件的id
      *  targetId：目标目录的id
      */
     public CommonResult moveFile(@PathVariable("sourceId") Long sourceId,
-                                 @PathVariable("targetId") Long targetId){
+                                 @PathVariable("targetId") Long targetId,
+                                 @PathVariable("userId") Long userId){
 
-        fileinfoService.moveFile(sourceId, targetId);
+        fileinfoService.moveFile(sourceId, targetId,userId);
         return CommonResult.ok();
     }
 
 
     @ApiOperation("文件批量移动")
-    @PostMapping("/moveFilesBatch/{targetId}")
+    @PostMapping("/moveFilesBatch/{targetId}/{userId}")
     /**
      *  ids：批量移动的文件id
      *  targetId：目标目录的id
      */
     public CommonResult moveFilesBatch(@RequestBody List<Long> ids,
-                                 @PathVariable("targetId") Long targetId){
+                                       @PathVariable("targetId") Long targetId,
+                                       @PathVariable("userId") Long userId){
 
         for (Long id : ids) {
-            fileinfoService.moveFile(id, targetId);
+            fileinfoService.moveFile(id, targetId, userId);
         }
 
         return CommonResult.ok();
@@ -446,6 +456,7 @@ public class FileinfoController {
 
         return CommonResult.ok().data("dirs",dirs);
     }
+
 
 }
 

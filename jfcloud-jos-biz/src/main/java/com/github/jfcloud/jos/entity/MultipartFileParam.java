@@ -34,7 +34,7 @@ public class MultipartFileParam {
     @ApiModelProperty("切片文件")
     private MultipartFile file;
 
-    @ApiModelProperty("文件信息对象")
-    private Fileinfo fileinfo;
+    /*@ApiModelProperty("文件信息对象")
+    private Fileinfo fileinfo;*/
 
 }

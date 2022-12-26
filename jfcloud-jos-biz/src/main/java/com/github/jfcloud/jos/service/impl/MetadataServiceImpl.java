@@ -30,5 +30,22 @@ public class MetadataServiceImpl extends ServiceImpl<MetadataMapper, Metadata> i
         return metadata;
     }
 
+    // 根据id批量删除
+    @Override
+    public void removeMetadataByIds(List<Long> ids,Long userId) {
+        baseMapper.removeMetadata(ids,userId,new Date());
+    }
+
+    // 根据id批量恢复
+    @Override
+    public void recoveryMeta(List<Long> metaIds) {
+        baseMapper.recoveryMeta(metaIds);
+    }
+
+    // 根据id彻底删除
+    @Override
+    public void deleteMeta(List<Long> ids) {
+        baseMapper.deleteMeta(ids);
+    }
 
 }

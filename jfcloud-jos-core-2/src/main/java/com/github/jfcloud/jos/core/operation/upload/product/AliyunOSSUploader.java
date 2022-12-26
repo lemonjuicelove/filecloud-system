@@ -45,11 +45,13 @@ public class AliyunOSSUploader implements Uploader {
         uploadPartRequest.setKey(objectName);
         uploadPartRequest.setUploadId(uploadId);
         InputStream is = null;
+
         try {
             is = uploadFile.getFile().getInputStream();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         uploadPartRequest.setInputStream(is);
         uploadPartRequest.setPartNumber(uploadFile.getChunkNumber());
         UploadPartResult uploadPartResult = ossClient.uploadPart(uploadPartRequest);

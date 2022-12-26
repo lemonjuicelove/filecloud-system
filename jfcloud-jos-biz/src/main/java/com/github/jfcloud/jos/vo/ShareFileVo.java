@@ -17,4 +17,10 @@ public class ShareFileVo {
     @ApiModelProperty(value = "有效期")
     private Integer time;
 
+    @ApiModelProperty(value = "分享人id")
+    private Long userId;
+
+    @ApiModelProperty(value = "分享人名称")
+    private String name;
+
 }
